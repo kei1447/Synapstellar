@@ -4,6 +4,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Stars, Text, Line } from "@react-three/drei";
 import { Suspense, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
+import { calculateBookPositions } from "@/lib/positioning";
 
 export interface BookStar {
     id: string;
@@ -34,29 +35,38 @@ interface Connection {
 }
 
 export function GalaxyCanvas({ books, onBookClick }: GalaxyCanvasProps) {
+    // カテゴリ・著者ベースの空間配置を計算
+    const bookPositions = useMemo(() => {
+        return calculateBookPositions(books.map(b => ({
+            id: b.id,
+            author: b.author,
+            tags: b.tags,
+            pos_x: b.pos_x,
+            pos_y: b.pos_y,
+            pos_z: b.pos_z,
+        })));
+    }, [books]);
+
+    // 配置済み座標を使って接続を計算
     const connections = useMemo(() => {
         const lines: Connection[] = [];
         const connectionSet = new Set<string>();
+
+        const getPos = (bookId: string): [number, number, number] | null => {
+            const pos = bookPositions.get(bookId);
+            return pos ? [pos.pos_x, pos.pos_y, pos.pos_z] : null;
+        };
 
         const addConnection = (bookA: BookStar, bookB: BookStar, color: string, type: ConnectionType) => {
             const key = [bookA.id, bookB.id].sort().join("-");
             if (connectionSet.has(key)) return;
             connectionSet.add(key);
 
-            lines.push({
-                from: [
-                    (bookA.pos_x - 50) * 2,
-                    (bookA.pos_y - 50) * 2,
-                    (bookA.pos_z - 50) * 2,
-                ],
-                to: [
-                    (bookB.pos_x - 50) * 2,
-                    (bookB.pos_y - 50) * 2,
-                    (bookB.pos_z - 50) * 2,
-                ],
-                color,
-                type,
-            });
+            const posA = getPos(bookA.id);
+            const posB = getPos(bookB.id);
+            if (!posA || !posB) return;
+
+            lines.push({ from: posA, to: posB, color, type });
         };
 
         // タグ接続
@@ -98,7 +108,7 @@ export function GalaxyCanvas({ books, onBookClick }: GalaxyCanvasProps) {
         });
 
         return lines;
-    }, [books]);
+    }, [books, bookPositions]);
 
     return (
         <div className="w-full h-full bg-black">
@@ -112,9 +122,18 @@ export function GalaxyCanvas({ books, onBookClick }: GalaxyCanvasProps) {
                     <pointLight position={[100, 100, 100]} intensity={0.8} color="#ffffff" />
                     <pointLight position={[-100, -100, -100]} intensity={0.3} color="#7c3aed" />
 
-                    {books.map((book) => (
-                        <CelestialBody key={book.id} book={book} onClick={() => onBookClick?.(book)} />
-                    ))}
+                    {books.map((book) => {
+                        const pos = bookPositions.get(book.id);
+                        if (!pos) return null;
+                        return (
+                            <CelestialBody
+                                key={book.id}
+                                book={book}
+                                position={[pos.pos_x, pos.pos_y, pos.pos_z]}
+                                onClick={() => onBookClick?.(book)}
+                            />
+                        );
+                    })}
 
                     {connections.map((conn, i) => (
                         <ConnectionLine key={i} start={conn.from} end={conn.to} color={conn.color} type={conn.type} />
@@ -131,18 +150,20 @@ export function GalaxyCanvas({ books, onBookClick }: GalaxyCanvasProps) {
     );
 }
 
-// 天体コンポーネント - イメージカラーと感情タグに基づく表現
-function CelestialBody({ book, onClick }: { book: BookStar; onClick: () => void }) {
+// 天体コンポーネント
+function CelestialBody({
+    book,
+    position,
+    onClick,
+}: {
+    book: BookStar;
+    position: [number, number, number];
+    onClick: () => void;
+}) {
     const groupRef = useRef<THREE.Group>(null);
     const [hovered, setHovered] = useState(false);
 
-    const position: [number, number, number] = [
-        (book.pos_x - 50) * 2,
-        (book.pos_y - 50) * 2,
-        (book.pos_z - 50) * 2,
-    ];
-
-    // イメージカラーを使用（なければデフォルト黄色）
+    // イメージカラーを使用
     const baseColor = book.image_color || book.tags[0]?.color || "#fbbf24";
     const color = new THREE.Color(baseColor);
 
@@ -157,26 +178,22 @@ function CelestialBody({ book, onClick }: { book: BookStar; onClick: () => void 
     const ratingFactor = book.rating ? (book.rating / 5) * 0.5 + 0.75 : 1;
     const baseSize = 1.8 * book.brightness * ratingFactor;
 
-    // 色温度による天体タイプ
+    // 色温度
     const hsl = { h: 0, s: 0, l: 0 };
     color.getHSL(hsl);
-    const isHotStar = hsl.h < 0.1 || hsl.h > 0.9; // 赤系
-    const isCoolStar = hsl.h > 0.5 && hsl.h < 0.7; // 青系
+    const isHotStar = hsl.h < 0.1 || hsl.h > 0.9;
+    const isCoolStar = hsl.h > 0.5 && hsl.h < 0.7;
 
-    useFrame((state) => {
+    useFrame(() => {
         if (groupRef.current) {
             groupRef.current.rotation.y += 0.002;
-            if (hovered) {
-                groupRef.current.scale.lerp(new THREE.Vector3(1.2, 1.2, 1.2), 0.1);
-            } else {
-                groupRef.current.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
-            }
+            const targetScale = hovered ? 1.2 : 1;
+            groupRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
         }
     });
 
     return (
         <group ref={groupRef} position={position}>
-            {/* メインの天体 */}
             <mesh
                 onClick={onClick}
                 onPointerOver={() => setHovered(true)}
@@ -191,7 +208,7 @@ function CelestialBody({ book, onClick }: { book: BookStar; onClick: () => void 
                 />
             </mesh>
 
-            {/* グローエフェクト */}
+            {/* グロー */}
             <mesh>
                 <sphereGeometry args={[baseSize * 1.3, 16, 16]} />
                 <meshBasicMaterial color={baseColor} transparent opacity={0.15} />
@@ -201,19 +218,11 @@ function CelestialBody({ book, onClick }: { book: BookStar; onClick: () => void 
                 <meshBasicMaterial color={baseColor} transparent opacity={0.08} />
             </mesh>
 
-            {/* 土星型リング (また読みたい) */}
             {hasRing && <PlanetRing size={baseSize} color={baseColor} />}
-
-            {/* 衛星 (人生観が変わった) */}
-            {hasMoons && <OrbitingMoons size={baseSize} color={baseColor} />}
-
-            {/* オーロラ (感動した) */}
+            {hasMoons && <OrbitingMoons size={baseSize} />}
             {hasAurora && <AuroraEffect size={baseSize} />}
-
-            {/* 小惑星帯 (考えさせられた) */}
             {hasAsteroidBelt && <AsteroidBelt size={baseSize} />}
 
-            {/* タイトル表示 */}
             <Text
                 position={[0, baseSize + 2, 0]}
                 fontSize={1.2}
@@ -226,7 +235,6 @@ function CelestialBody({ book, onClick }: { book: BookStar; onClick: () => void 
                 {book.title}
             </Text>
 
-            {/* ホバー時に著者表示 */}
             {hovered && book.author && (
                 <Text
                     position={[0, baseSize + 3.5, 0]}
@@ -245,13 +253,9 @@ function CelestialBody({ book, onClick }: { book: BookStar; onClick: () => void 
 // 惑星リング
 function PlanetRing({ size, color }: { size: number; color: string }) {
     const ringRef = useRef<THREE.Mesh>(null);
-
     useFrame(() => {
-        if (ringRef.current) {
-            ringRef.current.rotation.z += 0.001;
-        }
+        if (ringRef.current) ringRef.current.rotation.z += 0.001;
     });
-
     return (
         <mesh ref={ringRef} rotation={[Math.PI / 3, 0, 0]}>
             <ringGeometry args={[size * 1.8, size * 2.5, 64]} />
@@ -260,31 +264,29 @@ function PlanetRing({ size, color }: { size: number; color: string }) {
     );
 }
 
-// 周回する衛星
-function OrbitingMoons({ size, color }: { size: number; color: string }) {
-    const moonRef1 = useRef<THREE.Mesh>(null);
-    const moonRef2 = useRef<THREE.Mesh>(null);
-
+// 周回衛星
+function OrbitingMoons({ size }: { size: number }) {
+    const moon1Ref = useRef<THREE.Mesh>(null);
+    const moon2Ref = useRef<THREE.Mesh>(null);
     useFrame((state) => {
         const t = state.clock.elapsedTime;
-        if (moonRef1.current) {
-            moonRef1.current.position.x = Math.cos(t * 0.8) * (size * 2.5);
-            moonRef1.current.position.z = Math.sin(t * 0.8) * (size * 2.5);
+        if (moon1Ref.current) {
+            moon1Ref.current.position.x = Math.cos(t * 0.8) * (size * 2.5);
+            moon1Ref.current.position.z = Math.sin(t * 0.8) * (size * 2.5);
         }
-        if (moonRef2.current) {
-            moonRef2.current.position.x = Math.cos(t * 0.5 + Math.PI) * (size * 3.2);
-            moonRef2.current.position.y = Math.sin(t * 0.3) * (size * 0.5);
-            moonRef2.current.position.z = Math.sin(t * 0.5 + Math.PI) * (size * 3.2);
+        if (moon2Ref.current) {
+            moon2Ref.current.position.x = Math.cos(t * 0.5 + Math.PI) * (size * 3.2);
+            moon2Ref.current.position.y = Math.sin(t * 0.3) * (size * 0.5);
+            moon2Ref.current.position.z = Math.sin(t * 0.5 + Math.PI) * (size * 3.2);
         }
     });
-
     return (
         <>
-            <mesh ref={moonRef1}>
+            <mesh ref={moon1Ref}>
                 <sphereGeometry args={[size * 0.2, 16, 16]} />
                 <meshStandardMaterial color="#cccccc" />
             </mesh>
-            <mesh ref={moonRef2}>
+            <mesh ref={moon2Ref}>
                 <sphereGeometry args={[size * 0.15, 16, 16]} />
                 <meshStandardMaterial color="#aaaaaa" />
             </mesh>
@@ -292,10 +294,9 @@ function OrbitingMoons({ size, color }: { size: number; color: string }) {
     );
 }
 
-// オーロラエフェクト
+// オーロラ
 function AuroraEffect({ size }: { size: number }) {
     const auroraRef = useRef<THREE.Mesh>(null);
-
     useFrame((state) => {
         if (auroraRef.current) {
             auroraRef.current.rotation.y += 0.01;
@@ -303,7 +304,6 @@ function AuroraEffect({ size }: { size: number }) {
             auroraRef.current.scale.set(scale, 1, scale);
         }
     });
-
     return (
         <mesh ref={auroraRef} position={[0, size * 1.2, 0]}>
             <torusGeometry args={[size * 0.8, size * 0.1, 8, 32]} />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { searchGoogleBooks, GoogleBookVolume, categoriesToTags, getCoverImageUrl } from "@/lib/google-books";
 
 interface BookSearchProps {
@@ -21,6 +21,18 @@ export function BookSearch({ onSelectBook }: BookSearchProps) {
     const [results, setResults] = useState<GoogleBookVolume[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showResults, setShowResults] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // 外部クリックでドロップダウンを閉じる
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setShowResults(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     // デバウンス検索
     useEffect(() => {
@@ -58,7 +70,7 @@ export function BookSearch({ onSelectBook }: BookSearchProps) {
     }, [onSelectBook]);
 
     return (
-        <div className="relative">
+        <div ref={containerRef} className="relative" style={{ minHeight: showResults && results.length > 0 ? "350px" : "auto" }}>
             <label className="block text-sm text-white/80 mb-2">
                 📚 本を検索（タイトルまたはISBN）
             </label>
@@ -78,9 +90,9 @@ export function BookSearch({ onSelectBook }: BookSearchProps) {
                 )}
             </div>
 
-            {/* 検索結果ドロップダウン */}
+            {/* 検索結果ドロップダウン - 固定位置で他の要素の上に表示 */}
             {showResults && results.length > 0 && (
-                <div className="absolute z-50 w-full mt-2 bg-gray-900 border border-white/20 rounded-lg shadow-2xl max-h-80 overflow-y-auto">
+                <div className="absolute left-0 right-0 z-[100] mt-2 bg-gray-900/95 backdrop-blur-sm border border-white/20 rounded-lg shadow-2xl max-h-72 overflow-y-auto">
                     {results.map((book) => (
                         <button
                             key={book.id}
@@ -88,33 +100,26 @@ export function BookSearch({ onSelectBook }: BookSearchProps) {
                             onClick={() => handleSelect(book)}
                             className="w-full px-4 py-3 flex gap-3 hover:bg-white/10 transition-colors text-left border-b border-white/10 last:border-b-0"
                         >
-                            {/* 表紙サムネイル */}
                             {book.volumeInfo.imageLinks?.smallThumbnail ? (
                                 <img
                                     src={book.volumeInfo.imageLinks.smallThumbnail}
                                     alt=""
-                                    className="w-10 h-14 object-cover rounded"
+                                    className="w-10 h-14 object-cover rounded flex-shrink-0"
                                 />
                             ) : (
-                                <div className="w-10 h-14 bg-white/10 rounded flex items-center justify-center text-white/30">
+                                <div className="w-10 h-14 bg-white/10 rounded flex items-center justify-center text-white/30 flex-shrink-0">
                                     📖
                                 </div>
                             )}
-
                             <div className="flex-1 min-w-0">
-                                <div className="text-white font-medium truncate">
-                                    {book.volumeInfo.title}
-                                </div>
+                                <div className="text-white font-medium truncate">{book.volumeInfo.title}</div>
                                 <div className="text-white/60 text-sm truncate">
                                     {book.volumeInfo.authors?.join(", ") || "著者不明"}
                                 </div>
                                 {book.volumeInfo.categories && (
                                     <div className="flex flex-wrap gap-1 mt-1">
                                         {book.volumeInfo.categories.slice(0, 2).map((cat, i) => (
-                                            <span
-                                                key={i}
-                                                className="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded"
-                                            >
+                                            <span key={i} className="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded">
                                                 {cat.split("/")[0].trim()}
                                             </span>
                                         ))}
@@ -127,15 +132,15 @@ export function BookSearch({ onSelectBook }: BookSearchProps) {
             )}
 
             {showResults && results.length === 0 && query.length >= 2 && !isSearching && (
-                <div className="absolute z-50 w-full mt-2 bg-gray-900 border border-white/20 rounded-lg p-4 text-white/60 text-center">
-                    見つかりませんでした。手動で入力してください。
+                <div className="absolute left-0 right-0 z-[100] mt-2 bg-gray-900/95 backdrop-blur-sm border border-white/20 rounded-lg p-4 text-white/60 text-center">
+                    見つかりませんでした。下のフォームに直接入力してください。
                 </div>
             )}
 
-            {/* 手動入力への切り替えリンク */}
             <p className="mt-2 text-xs text-white/40">
                 見つからない場合は下のフォームに直接入力できます
             </p>
         </div>
     );
 }
+

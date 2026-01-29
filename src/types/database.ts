@@ -48,11 +48,16 @@ export type Database = {
                     brightness: number | null
                     cover_image_url: string | null
                     created_at: string
+                    description: string | null
+                    google_books_id: string | null
                     id: string
+                    image_color: string | null
                     memo: string | null
+                    page_count: number | null
                     pos_x: number | null
                     pos_y: number | null
                     pos_z: number | null
+                    published_date: string | null
                     rating: number | null
                     read_date: string | null
                     title: string
@@ -64,11 +69,16 @@ export type Database = {
                     brightness?: number | null
                     cover_image_url?: string | null
                     created_at?: string
+                    description?: string | null
+                    google_books_id?: string | null
                     id?: string
+                    image_color?: string | null
                     memo?: string | null
+                    page_count?: number | null
                     pos_x?: number | null
                     pos_y?: number | null
                     pos_z?: number | null
+                    published_date?: string | null
                     rating?: number | null
                     read_date?: string | null
                     title: string
@@ -80,11 +90,16 @@ export type Database = {
                     brightness?: number | null
                     cover_image_url?: string | null
                     created_at?: string
+                    description?: string | null
+                    google_books_id?: string | null
                     id?: string
+                    image_color?: string | null
                     memo?: string | null
+                    page_count?: number | null
                     pos_x?: number | null
                     pos_y?: number | null
                     pos_z?: number | null
+                    published_date?: string | null
                     rating?: number | null
                     read_date?: string | null
                     title?: string
@@ -92,6 +107,35 @@ export type Database = {
                     user_id?: string
                 }
                 Relationships: []
+            }
+            emotion_tags: {
+                Row: {
+                    book_id: string
+                    created_at: string
+                    emotion: string
+                    id: string
+                }
+                Insert: {
+                    book_id: string
+                    created_at?: string
+                    emotion: string
+                    id?: string
+                }
+                Update: {
+                    book_id?: string
+                    created_at?: string
+                    emotion?: string
+                    id?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "emotion_tags_book_id_fkey"
+                        columns: ["book_id"]
+                        isOneToOne: false
+                        referencedRelation: "books"
+                        referencedColumns: ["id"]
+                    }
+                ]
             }
             profiles: {
                 Row: {

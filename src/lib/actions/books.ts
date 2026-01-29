@@ -109,12 +109,22 @@ export async function updateBook(bookId: string, formData: FormData) {
         return { error: "認証が必要です" };
     }
 
+    const title = formData.get("title") as string;
+    const author = formData.get("author") as string;
+
     const bookData: Updatable<"books"> = {
-        title: formData.get("title") as string,
-        author: (formData.get("author") as string) || null,
+        title,
+        author: author || null,
         read_date: (formData.get("readDate") as string) || null,
         memo: (formData.get("memo") as string) || null,
         rating: formData.get("rating") ? parseInt(formData.get("rating") as string) : null,
+        // 新しいフィールド
+        image_color: (formData.get("imageColor") as string) || "#fbbf24",
+        cover_image_url: (formData.get("coverImageUrl") as string) || null,
+        google_books_id: (formData.get("googleBooksId") as string) || null,
+        page_count: formData.get("pageCount") ? parseInt(formData.get("pageCount") as string) : null,
+        published_date: (formData.get("publishedDate") as string) || null,
+        description: (formData.get("description") as string) || null,
         updated_at: new Date().toISOString(),
     };
 
@@ -126,6 +136,51 @@ export async function updateBook(bookId: string, formData: FormData) {
 
     if (error) {
         return { error: error.message };
+    }
+
+    // タグの更新（既存を削除して再登録）
+    const tagsInput = formData.get("tags") as string;
+    // 既存のタグ紐付けを削除
+    await supabase.from("book_tags").delete().eq("book_id", bookId);
+
+    if (tagsInput) {
+        const tagNames = tagsInput.split(",").map(t => t.trim()).filter(t => t);
+        for (const tagName of tagNames) {
+            let { data: existingTag } = await supabase
+                .from("tags")
+                .select("id")
+                .eq("user_id", user.id)
+                .eq("name", tagName)
+                .single();
+
+            if (!existingTag) {
+                const { data: newTag } = await supabase
+                    .from("tags")
+                    .insert({ user_id: user.id, name: tagName })
+                    .select("id")
+                    .single();
+                existingTag = newTag;
+            }
+
+            if (existingTag) {
+                await supabase
+                    .from("book_tags")
+                    .insert({ book_id: bookId, tag_id: existingTag.id });
+            }
+        }
+    }
+
+    // 感情タグの更新
+    const emotionsInput = formData.get("emotions") as string;
+    await supabase.from("emotion_tags").delete().eq("book_id", bookId);
+
+    if (emotionsInput) {
+        const emotions = emotionsInput.split(",").filter(e => e);
+        for (const emotion of emotions) {
+            await supabase
+                .from("emotion_tags")
+                .insert({ book_id: bookId, emotion });
+        }
     }
 
     revalidatePath("/books");

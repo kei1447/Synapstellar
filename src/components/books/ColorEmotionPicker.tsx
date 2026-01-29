@@ -23,6 +23,11 @@ const EMOTION_OPTIONS = [
     { value: "educational", label: "勉強になった", emoji: "📚" },
     { value: "life-changing", label: "人生観が変わった", emoji: "✨" },
     { value: "want-to-reread", label: "また読みたい", emoji: "🔄" },
+    { value: "shocking", label: "衝撃的", emoji: "🌪️" },
+    { value: "healed", label: "癒やされた", emoji: "🌿" },
+    { value: "complex", label: "難解だった", emoji: "🌫️" },
+    { value: "passionate", label: "情熱的", emoji: "🔥" },
+    { value: "dark", label: "暗い・重い", emoji: "🌑" },
 ];
 
 interface ColorEmotionPickerProps {
@@ -60,8 +65,8 @@ export function ColorEmotionPicker({
                             type="button"
                             onClick={() => onColorChange(color.value)}
                             className={`p-3 rounded-lg border-2 transition-all ${selectedColor === color.value
-                                    ? "border-white scale-105"
-                                    : "border-transparent hover:border-white/30"
+                                ? "border-white scale-105"
+                                : "border-transparent hover:border-white/30"
                                 }`}
                             style={{ backgroundColor: color.value + "30" }}
                         >
@@ -84,8 +89,8 @@ export function ColorEmotionPicker({
                             type="button"
                             onClick={() => toggleEmotion(emotion.value)}
                             className={`px-4 py-2 rounded-full border transition-all flex items-center gap-2 ${selectedEmotions.includes(emotion.value)
-                                    ? "bg-purple-500/30 border-purple-500 text-white"
-                                    : "bg-white/5 border-white/20 text-white/70 hover:border-white/40"
+                                ? "bg-purple-500/30 border-purple-500 text-white"
+                                : "bg-white/5 border-white/20 text-white/70 hover:border-white/40"
                                 }`}
                         >
                             <span>{emotion.emoji}</span>

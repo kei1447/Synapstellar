@@ -223,6 +223,13 @@ function CelestialBody({
             {hasAurora && <AuroraEffect size={baseSize} />}
             {hasAsteroidBelt && <AsteroidBelt size={baseSize} />}
 
+            {/* 新しいエフェクト */}
+            {emotions.includes("shocking") && <StormEffect size={baseSize} />}
+            {emotions.includes("healed") && <HealingAura size={baseSize} />}
+            {emotions.includes("complex") && <NebulaCloud size={baseSize} />}
+            {emotions.includes("passionate") && <CoronaFlare size={baseSize} color={baseColor} />}
+            {emotions.includes("dark") && <DarkMatter size={baseSize} />}
+
             <Text
                 position={[0, baseSize + 2, 0]}
                 fontSize={1.2}
@@ -334,6 +341,128 @@ function AsteroidBelt({ size }: { size: number }) {
                 <mesh key={i} position={pos}>
                     <dodecahedronGeometry args={[size * 0.08, 0]} />
                     <meshStandardMaterial color="#888888" roughness={0.9} />
+                </mesh>
+            ))}
+        </group>
+    );
+}
+
+// 台風/大赤斑 (Shocking)
+function StormEffect({ size }: { size: number }) {
+    const stormRef = useRef<THREE.Group>(null);
+    useFrame(() => {
+        if (stormRef.current) {
+            stormRef.current.rotation.z -= 0.05;
+        }
+    });
+    return (
+        <group rotation={[0, 0, Math.PI / 4]}>
+            <group ref={stormRef} position={[size, 0, 0]}>
+                <mesh>
+                    <ringGeometry args={[size * 0.2, size * 0.6, 32]} />
+                    <meshBasicMaterial color="#ef4444" transparent opacity={0.6} side={THREE.DoubleSide} />
+                </mesh>
+                <mesh>
+                    <ringGeometry args={[size * 0.1, size * 0.3, 32]} />
+                    <meshBasicMaterial color="#7f1d1d" transparent opacity={0.8} side={THREE.DoubleSide} />
+                </mesh>
+            </group>
+        </group>
+    );
+}
+
+// 癒やしのオーラ (Healed)
+function HealingAura({ size }: { size: number }) {
+    const particles = useMemo(() => {
+        return Array.from({ length: 20 }).map(() => ({
+            position: [
+                (Math.random() - 0.5) * size * 3,
+                (Math.random() - 0.5) * size * 3,
+                (Math.random() - 0.5) * size * 3,
+            ] as [number, number, number],
+            scale: Math.random() * 0.5 + 0.5,
+        }));
+    }, [size]);
+
+    const groupRef = useRef<THREE.Group>(null);
+    useFrame((state) => {
+        if (groupRef.current) {
+            groupRef.current.rotation.y += 0.005;
+            groupRef.current.position.y = Math.sin(state.clock.elapsedTime) * size * 0.1;
+        }
+    });
+
+    return (
+        <group ref={groupRef}>
+            {particles.map((p, i) => (
+                <mesh key={i} position={p.position}>
+                    <sphereGeometry args={[size * 0.1 * p.scale, 8, 8]} />
+                    <meshBasicMaterial color="#4ade80" transparent opacity={0.6} />
+                </mesh>
+            ))}
+        </group>
+    );
+}
+
+// 難解な霧 (Complex)
+function NebulaCloud({ size }: { size: number }) {
+    const cloudRef = useRef<THREE.Mesh>(null);
+    useFrame((state) => {
+        if (cloudRef.current) {
+            cloudRef.current.rotation.x += 0.002;
+            cloudRef.current.rotation.y += 0.003;
+            const s = 1.2 + Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
+            cloudRef.current.scale.set(s, s, s);
+        }
+    });
+    return (
+        <mesh ref={cloudRef}>
+            <dodecahedronGeometry args={[size * 1.5, 0]} />
+            <meshStandardMaterial color="#94a3b8" transparent opacity={0.3} wireframe />
+        </mesh>
+    );
+}
+
+// 情熱のフレア (Passionate)
+function CoronaFlare({ size, color }: { size: number, color: THREE.Color | string }) {
+    const flareRef = useRef<THREE.Mesh>(null);
+    useFrame((state) => {
+        if (flareRef.current) {
+            const s = 1.3 + Math.sin(state.clock.elapsedTime * 10) * 0.1 + Math.random() * 0.1;
+            flareRef.current.scale.set(s, s, s);
+        }
+    });
+    return (
+        <mesh ref={flareRef}>
+            <sphereGeometry args={[size, 32, 32]} />
+            <meshBasicMaterial color={color} transparent opacity={0.4} blending={THREE.AdditiveBlending} />
+        </mesh>
+    );
+}
+
+// 暗黒物質 (Dark)
+function DarkMatter({ size }: { size: number }) {
+    const particles = useMemo(() => {
+        return Array.from({ length: 40 }).map(() => ({
+            position: [
+                (Math.random() - 0.5) * size * 4,
+                (Math.random() - 0.5) * size * 4,
+                (Math.random() - 0.5) * size * 4,
+            ] as [number, number, number],
+        }));
+    }, [size]);
+
+    const groupRef = useRef<THREE.Group>(null);
+    useFrame(() => {
+        if (groupRef.current) groupRef.current.rotation.y -= 0.005;
+    });
+
+    return (
+        <group ref={groupRef}>
+            {particles.map((p, i) => (
+                <mesh key={i} position={p.position}>
+                    <boxGeometry args={[size * 0.1, size * 0.1, size * 0.1]} />
+                    <meshBasicMaterial color="#000000" />
                 </mesh>
             ))}
         </group>

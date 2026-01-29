@@ -21,13 +21,21 @@ export async function createBook(formData: FormData) {
 
     const isFirstBook = existingCount === 0;
 
-    const bookData: Insertable<"books"> = {
+    // 基本データ + 新フィールド
+    const bookData = {
         user_id: user.id,
         title: formData.get("title") as string,
         author: (formData.get("author") as string) || null,
         read_date: (formData.get("readDate") as string) || null,
         memo: (formData.get("memo") as string) || null,
         rating: formData.get("rating") ? parseInt(formData.get("rating") as string) : null,
+        // 新しいフィールド
+        image_color: (formData.get("imageColor") as string) || "#fbbf24",
+        cover_image_url: (formData.get("coverImageUrl") as string) || null,
+        google_books_id: (formData.get("googleBooksId") as string) || null,
+        page_count: formData.get("pageCount") ? parseInt(formData.get("pageCount") as string) : null,
+        published_date: (formData.get("publishedDate") as string) || null,
+        description: (formData.get("description") as string) || null,
     };
 
     const { data: book, error } = await supabase
@@ -46,7 +54,6 @@ export async function createBook(formData: FormData) {
         const tagNames = tagsInput.split(",").map(t => t.trim()).filter(t => t);
 
         for (const tagName of tagNames) {
-            // 既存タグを確認または新規作成
             let { data: existingTag } = await supabase
                 .from("tags")
                 .select("id")
@@ -68,6 +75,17 @@ export async function createBook(formData: FormData) {
                     .from("book_tags")
                     .insert({ book_id: book.id, tag_id: existingTag.id });
             }
+        }
+    }
+
+    // 感情タグを処理
+    const emotionsInput = formData.get("emotions") as string;
+    if (emotionsInput) {
+        const emotions = emotionsInput.split(",").filter(e => e);
+        for (const emotion of emotions) {
+            await supabase
+                .from("emotion_tags")
+                .insert({ book_id: book.id, emotion });
         }
     }
 
@@ -186,6 +204,9 @@ export async function getBooksWithTags() {
           name,
           color
         )
+      ),
+      emotion_tags (
+        emotion
       )
     `)
         .eq("user_id", user.id);
@@ -194,10 +215,11 @@ export async function getBooksWithTags() {
         return { books: [], error: error.message };
     }
 
-    // タグ情報をフラット化
+    // タグ情報と感情タグをフラット化
     const booksWithTags = books?.map(book => ({
         ...book,
         tags: book.book_tags?.map((bt: { tags: { id: string; name: string; color: string } }) => bt.tags) || [],
+        emotion_tags: book.emotion_tags?.map((et: { emotion: string }) => et.emotion) || [],
     })) || [];
 
     return { books: booksWithTags, error: null };

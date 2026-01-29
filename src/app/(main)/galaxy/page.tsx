@@ -24,6 +24,8 @@ export default async function GalaxyPage() {
         pos_z: book.pos_z ?? 50,
         brightness: book.brightness ?? 1,
         rating: book.rating,
+        image_color: book.image_color,
+        emotion_tags: book.emotion_tags || [],
         tags: book.tags || [],
     }));
 

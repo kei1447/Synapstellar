@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { searchGoogleBooks, GoogleBookVolume, categoriesToTags, getCoverImageUrl } from "@/lib/google-books";
+import { searchByISBN, isISBN, normalizeToIsbn13 } from "@/lib/openbd";
 
 interface BookSearchProps {
     onSelectBook: (book: {
@@ -16,9 +17,24 @@ interface BookSearchProps {
     }) => void;
 }
 
+// OpenBD結果をGoogleBookVolume互換に変換
+interface SearchResult {
+    id: string;
+    source: "openbd" | "google";
+    volumeInfo: {
+        title: string;
+        authors?: string[];
+        categories?: string[];
+        imageLinks?: { smallThumbnail?: string; thumbnail?: string };
+        pageCount?: number;
+        publishedDate?: string;
+        description?: string;
+    };
+}
+
 export function BookSearch({ onSelectBook }: BookSearchProps) {
     const [query, setQuery] = useState("");
-    const [results, setResults] = useState<GoogleBookVolume[]>([]);
+    const [results, setResults] = useState<SearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showResults, setShowResults] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -44,8 +60,40 @@ export function BookSearch({ onSelectBook }: BookSearchProps) {
 
         const timer = setTimeout(async () => {
             setIsSearching(true);
+
+            // ISBN/ASIN の場合はOpenBDを優先
+            const normalizedIsbn = normalizeToIsbn13(query);
+            if (normalizedIsbn) {
+                const openBDResult = await searchByISBN(normalizedIsbn);
+                if (openBDResult) {
+                    const result: SearchResult = {
+                        id: openBDResult.isbn,
+                        source: "openbd",
+                        volumeInfo: {
+                            title: openBDResult.title,
+                            authors: openBDResult.author ? [openBDResult.author] : undefined,
+                            categories: openBDResult.categories,
+                            imageLinks: openBDResult.coverUrl ? { thumbnail: openBDResult.coverUrl } : undefined,
+                            pageCount: openBDResult.pageCount || undefined,
+                            publishedDate: openBDResult.pubdate,
+                            description: openBDResult.description || undefined,
+                        },
+                    };
+                    setResults([result]);
+                    setShowResults(true);
+                    setIsSearching(false);
+                    return;
+                }
+            }
+
+            // OpenBDで見つからない場合、またはタイトル検索の場合はGoogle Books
             const books = await searchGoogleBooks(query);
-            setResults(books);
+            const googleResults: SearchResult[] = books.map(book => ({
+                id: book.id,
+                source: "google" as const,
+                volumeInfo: book.volumeInfo,
+            }));
+            setResults(googleResults);
             setShowResults(true);
             setIsSearching(false);
         }, 500);
@@ -53,13 +101,13 @@ export function BookSearch({ onSelectBook }: BookSearchProps) {
         return () => clearTimeout(timer);
     }, [query]);
 
-    const handleSelect = useCallback((book: GoogleBookVolume) => {
+    const handleSelect = useCallback((book: SearchResult) => {
         const info = book.volumeInfo;
         onSelectBook({
             title: info.title,
             author: info.authors?.join(", ") || "",
-            categories: categoriesToTags(info.categories),
-            coverUrl: getCoverImageUrl(info.imageLinks),
+            categories: info.categories || [],
+            coverUrl: info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || null,
             googleBooksId: book.id,
             pageCount: info.pageCount,
             publishedDate: info.publishedDate,

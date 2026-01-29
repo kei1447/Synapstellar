@@ -163,9 +163,48 @@ function CelestialBody({
     const groupRef = useRef<THREE.Group>(null);
     const [hovered, setHovered] = useState(false);
 
-    // イメージカラーを使用
-    const baseColor = book.image_color || book.tags[0]?.color || "#fbbf24";
+    // 色のパースとマーブルテクスチャ生成
+    const colors = useMemo(() => {
+        if (book.image_color) return book.image_color.split(",");
+        const tagColor = book.tags[0]?.color;
+        return tagColor ? [tagColor] : ["#fbbf24"];
+    }, [book.image_color, book.tags]);
+
+    const baseColor = colors[0];
     const color = new THREE.Color(baseColor);
+
+    const marbleTexture = useMemo(() => {
+        if (colors.length <= 1 || typeof document === 'undefined') return null;
+
+        const canvas = document.createElement("canvas");
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return null;
+
+        // ベース色
+        ctx.fillStyle = colors[0];
+        ctx.fillRect(0, 0, 256, 256);
+
+        // 混色（簡易的なマーブル模様）
+        colors.slice(1).forEach((c) => {
+            for (let i = 0; i < 15; i++) {
+                const x = Math.random() * 256;
+                const y = Math.random() * 256;
+                const r = 30 + Math.random() * 60;
+
+                const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
+                // 16進数カラーに透明度を追加するのは複雑なので、globalAlphaで対応
+                ctx.fillStyle = c;
+                ctx.globalAlpha = 0.5;
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+
+        return new THREE.CanvasTexture(canvas);
+    }, [colors]);
 
     // 感情タグによるエフェクト判定
     const emotions = book.emotion_tags || [];
@@ -201,10 +240,12 @@ function CelestialBody({
             >
                 <sphereGeometry args={[baseSize, 32, 32]} />
                 <meshStandardMaterial
-                    color={baseColor}
+                    color={colors.length === 1 ? baseColor : "#ffffff"}
+                    map={marbleTexture}
                     emissive={baseColor}
                     emissiveIntensity={isHotStar ? 0.8 : 0.4}
                     roughness={isCoolStar ? 0.8 : 0.3}
+                    metalness={0.2}
                 />
             </mesh>
 

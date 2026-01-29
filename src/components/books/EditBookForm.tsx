@@ -43,8 +43,13 @@ export function EditBookForm({ bookId, initialData }: EditBookFormProps) {
     });
 
     // ハイブリッド評価
-    const [imageColor, setImageColor] = useState(initialData.imageColor || "#fbbf24");
+    const [imageColors, setImageColors] = useState<string[]>(
+        initialData.imageColor ? initialData.imageColor.split(",") : ["#fbbf24"]
+    );
     const [selectedEmotions, setSelectedEmotions] = useState<string[]>(initialData.emotions || []);
+
+    // カスタムタグ（ユーザー独自）
+    const [customTags, setCustomTags] = useState("");
 
     // Google Books検索結果から自動入力（上書き）
     const handleBookSelect = (book: {
@@ -80,11 +85,12 @@ export function EditBookForm({ bookId, initialData }: EditBookFormProps) {
         const submitData = new FormData();
         submitData.set("title", formData.title);
         submitData.set("author", formData.author);
-        submitData.set("tags", formData.tags);
-        submitData.set("imageColor", imageColor);
+        // カテゴリとカスタムタグを統合
+        const allTags = [formData.tags, customTags].filter(Boolean).join(", ");
+        submitData.set("tags", allTags);
+        submitData.set("imageColor", imageColors.join(","));
         submitData.set("emotions", selectedEmotions.join(","));
 
-        // Google Books由来のデータ
         if (formData.coverImageUrl) submitData.set("coverImageUrl", formData.coverImageUrl);
         if (formData.googleBooksId) submitData.set("googleBooksId", formData.googleBooksId);
         if (formData.pageCount) submitData.set("pageCount", formData.pageCount.toString());
@@ -162,7 +168,7 @@ export function EditBookForm({ bookId, initialData }: EditBookFormProps) {
 
                             <div>
                                 <label className="block text-sm text-white/80 mb-2">
-                                    タグ（カンマ区切り）
+                                    📚 タグ（登録済み）
                                 </label>
                                 <input
                                     type="text"
@@ -171,6 +177,21 @@ export function EditBookForm({ bookId, initialData }: EditBookFormProps) {
                                     className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-purple-500 transition-colors"
                                     placeholder="小説, SF, 哲学..."
                                 />
+                            </div>
+                            <div>
+                                <label className="block text-sm text-white/80 mb-2">
+                                    🏷️ タグを追加（自由入力）
+                                </label>
+                                <input
+                                    type="text"
+                                    value={customTags}
+                                    onChange={(e) => setCustomTags(e.target.value)}
+                                    className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-purple-500 transition-colors"
+                                    placeholder="積読, 2024ベスト, おすすめ..."
+                                />
+                                <p className="mt-1 text-xs text-white/40">
+                                    カンマ区切りで新しいタグを追加できます
+                                </p>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
@@ -190,12 +211,12 @@ export function EditBookForm({ bookId, initialData }: EditBookFormProps) {
                                         onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
                                         className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
                                     >
-                                        <option value="">未評価</option>
-                                        <option value="5">★★★★★</option>
-                                        <option value="4">★★★★☆</option>
-                                        <option value="3">★★★☆☆</option>
-                                        <option value="2">★★☆☆☆</option>
-                                        <option value="1">★☆☆☆☆</option>
+                                        <option value="" className="text-black">未評価</option>
+                                        <option value="5" className="text-black">★★★★★</option>
+                                        <option value="4" className="text-black">★★★★☆</option>
+                                        <option value="3" className="text-black">★★★☆☆</option>
+                                        <option value="2" className="text-black">★★☆☆☆</option>
+                                        <option value="1" className="text-black">★☆☆☆☆</option>
                                     </select>
                                 </div>
                             </div>
@@ -237,9 +258,9 @@ export function EditBookForm({ bookId, initialData }: EditBookFormProps) {
                     <h3 className="text-lg font-semibold text-white mb-4">星のイメージを設定</h3>
 
                     <ColorEmotionPicker
-                        selectedColor={imageColor}
+                        selectedColors={imageColors}
                         selectedEmotions={selectedEmotions}
-                        onColorChange={setImageColor}
+                        onColorsChange={setImageColors}
                         onEmotionsChange={setSelectedEmotions}
                     />
                 </div>

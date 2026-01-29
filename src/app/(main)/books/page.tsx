@@ -108,10 +108,10 @@ function BookCard({ book }: { book: any }) {
                     {tags.map((tag: any) => (
                         <span
                             key={tag.id}
-                            className="px-2 py-1 text-xs rounded-full"
+                            className="px-2 py-1 text-xs rounded-full font-medium"
                             style={{ backgroundColor: tag.color + "30", color: tag.color }}
                         >
-                            {tag.name}
+                            #{tag.name}
                         </span>
                     ))}
                 </div>

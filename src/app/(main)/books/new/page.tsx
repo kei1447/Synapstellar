@@ -7,6 +7,7 @@ import { createBook } from "@/lib/actions/books";
 import { FirstBookCelebration } from "@/components/galaxy/BigBangAnimation";
 import { BookSearch } from "@/components/books/BookSearch";
 import { ColorEmotionPicker } from "@/components/books/ColorEmotionPicker";
+import { suggestTags } from "@/lib/gemini";
 
 interface BookFormData {
     title: string;
@@ -39,8 +40,15 @@ export default function NewBookPage() {
     });
 
     // ハイブリッド評価
-    const [imageColor, setImageColor] = useState("#fbbf24"); // デフォルト: 黄
+    const [imageColors, setImageColors] = useState<string[]>(["#fbbf24"]); // デフォルト: 黄
     const [selectedEmotions, setSelectedEmotions] = useState<string[]>([]);
+
+    // カスタムタグ（ユーザー独自）
+    const [customTags, setCustomTags] = useState("");
+
+    // AIタグ提案
+    const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
+    const [isSuggestingTags, setIsSuggestingTags] = useState(false);
 
     // Google Books検索結果から自動入力
     const handleBookSelect = (book: {
@@ -73,8 +81,10 @@ export default function NewBookPage() {
         const submitData = new FormData();
         submitData.set("title", formData.title);
         submitData.set("author", formData.author);
-        submitData.set("tags", formData.tags);
-        submitData.set("imageColor", imageColor);
+        // カテゴリとカスタムタグを統合
+        const allTags = [formData.tags, customTags].filter(Boolean).join(", ");
+        submitData.set("tags", allTags);
+        submitData.set("imageColor", imageColors.join(","));
         submitData.set("emotions", selectedEmotions.join(","));
 
         // Google Books由来のデータ
@@ -204,17 +214,69 @@ export default function NewBookPage() {
 
                                     <div>
                                         <label className="block text-sm text-white/80 mb-2">
-                                            タグ（カンマ区切り）
+                                            📚 カテゴリ（API自動取得）
                                         </label>
                                         <input
                                             type="text"
                                             value={formData.tags}
-                                            onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                                            className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-purple-500 transition-colors"
-                                            placeholder="小説, SF, 哲学..."
+                                            readOnly
+                                            className="w-full px-4 py-3 bg-white/10 border border-white/10 rounded-lg text-white/60 cursor-not-allowed"
+                                            placeholder="検索から自動入力されます"
                                         />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-white/80 mb-2">
+                                            🏷️ カスタムタグ（自由入力）
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={customTags}
+                                            onChange={(e) => setCustomTags(e.target.value)}
+                                            className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-purple-500 transition-colors"
+                                            placeholder="積読, 2024ベスト, おすすめ..."
+                                        />
+                                        <div className="mt-2 flex flex-wrap gap-2 items-center">
+                                            <button
+                                                type="button"
+                                                disabled={!formData.title || isSuggestingTags}
+                                                onClick={async () => {
+                                                    setIsSuggestingTags(true);
+                                                    const tags = await suggestTags(
+                                                        formData.title,
+                                                        formData.author,
+                                                        formData.description || undefined
+                                                    );
+                                                    setSuggestedTags(tags);
+                                                    setIsSuggestingTags(false);
+                                                }}
+                                                className="px-3 py-1.5 text-sm bg-gradient-to-r from-purple-600/50 to-cyan-600/50 rounded-lg text-white hover:from-purple-600 hover:to-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-1"
+                                            >
+                                                {isSuggestingTags ? (
+                                                    <>
+                                                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                                                        提案中...
+                                                    </>
+                                                ) : (
+                                                    <>✨ AIにタグを提案してもらう</>
+                                                )}
+                                            </button>
+                                            {suggestedTags.map((tag, i) => (
+                                                <button
+                                                    key={i}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const newTags = customTags ? `${customTags}, ${tag}` : tag;
+                                                        setCustomTags(newTags);
+                                                        setSuggestedTags(suggestedTags.filter((_, idx) => idx !== i));
+                                                    }}
+                                                    className="px-2 py-1 text-xs bg-purple-500/20 text-purple-300 rounded-full hover:bg-purple-500/40 transition-colors"
+                                                >
+                                                    + #{tag}
+                                                </button>
+                                            ))}
+                                        </div>
                                         <p className="mt-1 text-xs text-white/40">
-                                            検索から選択すると自動入力されます
+                                            カンマ区切りで複数入力できます
                                         </p>
                                     </div>
 
@@ -233,12 +295,12 @@ export default function NewBookPage() {
                                                 name="rating"
                                                 className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
                                             >
-                                                <option value="">未評価</option>
-                                                <option value="5">★★★★★</option>
-                                                <option value="4">★★★★☆</option>
-                                                <option value="3">★★★☆☆</option>
-                                                <option value="2">★★☆☆☆</option>
-                                                <option value="1">★☆☆☆☆</option>
+                                                <option value="" className="text-black">未評価</option>
+                                                <option value="5" className="text-black">★★★★★</option>
+                                                <option value="4" className="text-black">★★★★☆</option>
+                                                <option value="3" className="text-black">★★★☆☆</option>
+                                                <option value="2" className="text-black">★★☆☆☆</option>
+                                                <option value="1" className="text-black">★☆☆☆☆</option>
                                             </select>
                                         </div>
                                     </div>
@@ -282,9 +344,9 @@ export default function NewBookPage() {
                             </h3>
 
                             <ColorEmotionPicker
-                                selectedColor={imageColor}
+                                selectedColors={imageColors}
                                 selectedEmotions={selectedEmotions}
-                                onColorChange={setImageColor}
+                                onColorsChange={setImageColors}
                                 onEmotionsChange={setSelectedEmotions}
                             />
 
@@ -295,8 +357,8 @@ export default function NewBookPage() {
                                     <div
                                         className="w-12 h-12 rounded-full"
                                         style={{
-                                            backgroundColor: imageColor,
-                                            boxShadow: `0 0 20px ${imageColor}80, 0 0 40px ${imageColor}40`,
+                                            backgroundColor: imageColors[0] || "#fbbf24",
+                                            boxShadow: `0 0 20px ${(imageColors[0] || "#fbbf24")}80, 0 0 40px ${(imageColors[0] || "#fbbf24")}40`,
                                         }}
                                     />
                                     <div>

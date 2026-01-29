@@ -31,18 +31,35 @@ const EMOTION_OPTIONS = [
 ];
 
 interface ColorEmotionPickerProps {
-    selectedColor: string;
+    selectedColors: string[];
     selectedEmotions: string[];
-    onColorChange: (color: string) => void;
+    onColorsChange: (colors: string[]) => void;
     onEmotionsChange: (emotions: string[]) => void;
 }
 
 export function ColorEmotionPicker({
-    selectedColor,
+    selectedColors,
     selectedEmotions,
-    onColorChange,
+    onColorsChange,
     onEmotionsChange,
 }: ColorEmotionPickerProps) {
+    const toggleColor = (color: string) => {
+        if (selectedColors.includes(color)) {
+            // 少なくとも1色は選択状態にする
+            if (selectedColors.length > 1) {
+                onColorsChange(selectedColors.filter((c) => c !== color));
+            }
+        } else {
+            // 最大3色まで
+            if (selectedColors.length < 3) {
+                onColorsChange([...selectedColors, color]);
+            } else {
+                // 押し出し式（一番古いものを削除して追加）
+                onColorsChange([...selectedColors.slice(1), color]);
+            }
+        }
+    };
+
     const toggleEmotion = (emotion: string) => {
         if (selectedEmotions.includes(emotion)) {
             onEmotionsChange(selectedEmotions.filter((e) => e !== emotion));
@@ -56,22 +73,25 @@ export function ColorEmotionPicker({
             {/* イメージカラー選択 */}
             <div>
                 <label className="block text-sm text-white/80 mb-3">
-                    🎨 この本のイメージカラー
+                    🎨 この本のイメージカラー（最大3色）
                 </label>
                 <div className="grid grid-cols-4 gap-3">
                     {COLOR_OPTIONS.map((color) => (
                         <button
                             key={color.value}
                             type="button"
-                            onClick={() => onColorChange(color.value)}
-                            className={`p-3 rounded-lg border-2 transition-all ${selectedColor === color.value
+                            onClick={() => toggleColor(color.value)}
+                            className={`p-3 rounded-lg border-2 transition-all relative ${selectedColors.includes(color.value)
                                 ? "border-white scale-105"
-                                : "border-transparent hover:border-white/30"
+                                : "border-transparent hover:border-white/30 truncate"
                                 }`}
                             style={{ backgroundColor: color.value + "30" }}
                         >
                             <div className="text-2xl mb-1">{color.emoji}</div>
                             <div className="text-xs text-white/70">{color.description}</div>
+                            {selectedColors.includes(color.value) && (
+                                <div className="absolute top-1 right-1 w-2 h-2 bg-white rounded-full shadow-lg" />
+                            )}
                         </button>
                     ))}
                 </div>

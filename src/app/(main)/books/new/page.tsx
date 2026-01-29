@@ -4,10 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createBook } from "@/lib/actions/books";
+import { FirstBookCelebration } from "@/components/galaxy/BigBangAnimation";
 
 export default function NewBookPage() {
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [showBigBang, setShowBigBang] = useState(false);
+    const [firstBookTitle, setFirstBookTitle] = useState("");
     const router = useRouter();
 
     async function handleSubmit(formData: FormData) {
@@ -15,10 +18,36 @@ export default function NewBookPage() {
         setError(null);
 
         const result = await createBook(formData);
+
         if (result?.error) {
             setError(result.error);
             setIsLoading(false);
+            return;
         }
+
+        if (result?.success) {
+            if (result.isFirstBook && result.bookTitle) {
+                // 最初の本の場合、ビッグバン演出を表示
+                setFirstBookTitle(result.bookTitle);
+                setShowBigBang(true);
+            } else {
+                // 2冊目以降は直接遷移
+                router.push("/galaxy");
+            }
+        }
+    }
+
+    function handleBigBangComplete() {
+        router.push("/galaxy");
+    }
+
+    if (showBigBang) {
+        return (
+            <FirstBookCelebration
+                bookTitle={firstBookTitle}
+                onComplete={handleBigBangComplete}
+            />
+        );
     }
 
     return (
@@ -41,6 +70,9 @@ export default function NewBookPage() {
                         ← 本の一覧に戻る
                     </Link>
                     <h2 className="text-3xl font-bold text-white">新しい本を追加</h2>
+                    <p className="text-white/60 mt-2">
+                        本を登録すると、あなたの読書宇宙に新しい星が生まれます ✨
+                    </p>
                 </div>
 
                 <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-8">
@@ -76,6 +108,9 @@ export default function NewBookPage() {
                                 className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-purple-500 transition-colors"
                                 placeholder="著者名"
                             />
+                            <p className="mt-1 text-xs text-white/40">
+                                同じ著者の本は自動的に繋がります
+                            </p>
                         </div>
 
                         <div>
@@ -145,7 +180,7 @@ export default function NewBookPage() {
                                 disabled={isLoading}
                                 className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-cyan-600 rounded-lg font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-50"
                             >
-                                {isLoading ? "追加中..." : "✨ 本を追加"}
+                                {isLoading ? "宇宙を創造中..." : "✨ 星を生み出す"}
                             </button>
                             <Link
                                 href="/books"

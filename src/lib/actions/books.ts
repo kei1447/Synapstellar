@@ -10,8 +10,16 @@ export async function createBook(formData: FormData) {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-        return { error: "認証が必要です" };
+        return { error: "認証が必要です", success: false };
     }
+
+    // 既存の本の数を確認（最初の本かどうか）
+    const { count: existingCount } = await supabase
+        .from("books")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+
+    const isFirstBook = existingCount === 0;
 
     const bookData: Insertable<"books"> = {
         user_id: user.id,
@@ -29,7 +37,7 @@ export async function createBook(formData: FormData) {
         .single();
 
     if (error) {
-        return { error: error.message };
+        return { error: error.message, success: false };
     }
 
     // タグを処理
@@ -65,8 +73,15 @@ export async function createBook(formData: FormData) {
 
     revalidatePath("/books");
     revalidatePath("/galaxy");
-    redirect("/books");
+
+    return {
+        success: true,
+        isFirstBook,
+        bookTitle: book.title,
+        error: null
+    };
 }
+
 
 export async function updateBook(bookId: string, formData: FormData) {
     const supabase = await createClient();

@@ -19,11 +19,14 @@ export default async function DashboardPage() {
         .eq("id", user.id)
         .single();
 
-    // 本の数を取得
-    const { count: bookCount } = await supabase
-        .from("books")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id);
+    // 本とタグの情報を取得してつながりを計算
+    const { getBooksWithTags } = await import("@/lib/actions/books");
+    const { books } = await getBooksWithTags();
+    const { calculateConnectionCount } = await import("@/lib/metrics");
+    const connectionCount = calculateConnectionCount(books);
+
+    // 本の数
+    const bookCount = books.length;
 
     return (
         <div className="galaxy-bg min-h-screen">
@@ -86,7 +89,7 @@ export default async function DashboardPage() {
                     <StatusCard
                         icon="🔗"
                         title="つながり"
-                        value={0}
+                        value={connectionCount}
                         unit="本"
                     />
                 </div>

@@ -1,8 +1,8 @@
 "use client";
 
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Stars, Text, Line } from "@react-three/drei";
-import { Suspense, useMemo, useRef, useState } from "react";
+import { Suspense, useMemo, useRef, useState, useCallback, useEffect } from "react";
 import * as THREE from "three";
 import { calculateBookPositions } from "@/lib/positioning";
 
@@ -17,24 +17,42 @@ export interface BookStar {
     rating?: number | null;
     image_color?: string | null;
     emotion_tags?: string[];
+    read_date?: string | null;
     tags: Array<{ id: string; name: string; color: string }>;
 }
 
 interface GalaxyCanvasProps {
     books: BookStar[];
     onBookClick?: (book: BookStar) => void;
+    onBookHover?: (bookId: string | null) => void;
+    hoveredBookId?: string | null;
+    connectionStrength?: "all" | "medium" | "strong";
+    showTagConnections?: boolean;
+    showAuthorConnections?: boolean;
 }
 
 type ConnectionType = "tag" | "author";
+type ConnectionStrength = "strong" | "medium" | "weak";
 
 interface Connection {
     from: [number, number, number];
     to: [number, number, number];
     color: string;
     type: ConnectionType;
+    strength: ConnectionStrength;
+    fromId: string;
+    toId: string;
 }
 
-export function GalaxyCanvas({ books, onBookClick }: GalaxyCanvasProps) {
+export function GalaxyCanvas({
+    books,
+    onBookClick,
+    onBookHover,
+    hoveredBookId,
+    connectionStrength = "strong",
+    showTagConnections = true,
+    showAuthorConnections = true,
+}: GalaxyCanvasProps) {
     // カテゴリ・著者ベースの空間配置を計算
     const bookPositions = useMemo(() => {
         return calculateBookPositions(books.map(b => ({
@@ -47,17 +65,26 @@ export function GalaxyCanvas({ books, onBookClick }: GalaxyCanvasProps) {
         })));
     }, [books]);
 
-    // 配置済み座標を使って接続を計算
+    // 接続の強度を計算し、接続を生成
     const connections = useMemo(() => {
         const lines: Connection[] = [];
         const connectionSet = new Set<string>();
+
+        // 本ごとの共有タグ数をカウント
+        const bookPairTagCount = new Map<string, number>();
 
         const getPos = (bookId: string): [number, number, number] | null => {
             const pos = bookPositions.get(bookId);
             return pos ? [pos.pos_x, pos.pos_y, pos.pos_z] : null;
         };
 
-        const addConnection = (bookA: BookStar, bookB: BookStar, color: string, type: ConnectionType) => {
+        const addConnection = (
+            bookA: BookStar,
+            bookB: BookStar,
+            color: string,
+            type: ConnectionType,
+            sharedCount: number = 1
+        ) => {
             const key = [bookA.id, bookB.id].sort().join("-");
             if (connectionSet.has(key)) return;
             connectionSet.add(key);
@@ -66,49 +93,123 @@ export function GalaxyCanvas({ books, onBookClick }: GalaxyCanvasProps) {
             const posB = getPos(bookB.id);
             if (!posA || !posB) return;
 
-            lines.push({ from: posA, to: posB, color, type });
+            // 共有数に基づいて強度を決定
+            let strength: ConnectionStrength;
+            if (sharedCount >= 3) {
+                strength = "strong";
+            } else if (sharedCount >= 2) {
+                strength = "medium";
+            } else {
+                strength = "weak";
+            }
+
+            lines.push({
+                from: posA,
+                to: posB,
+                color,
+                type,
+                strength,
+                fromId: bookA.id,
+                toId: bookB.id,
+            });
         };
 
-        // タグ接続
-        const tagToBooks = new Map<string, BookStar[]>();
-        books.forEach((book) => {
-            book.tags.forEach((tag) => {
-                if (!tagToBooks.has(tag.id)) tagToBooks.set(tag.id, []);
-                tagToBooks.get(tag.id)!.push(book);
+        // タグ接続（有効時のみ）
+        if (showTagConnections) {
+            // 本ペアごとの共有タグ数をカウント
+            const pairSharedTags = new Map<string, { bookA: BookStar; bookB: BookStar; count: number; color: string }>();
+
+            books.forEach((bookA, i) => {
+                books.slice(i + 1).forEach((bookB) => {
+                    const key = [bookA.id, bookB.id].sort().join("-");
+                    const sharedTags = bookA.tags.filter(tagA =>
+                        bookB.tags.some(tagB => tagB.id === tagA.id)
+                    );
+
+                    if (sharedTags.length > 0) {
+                        pairSharedTags.set(key, {
+                            bookA,
+                            bookB,
+                            count: sharedTags.length,
+                            color: sharedTags[0].color,
+                        });
+                    }
+                });
             });
-        });
 
-        tagToBooks.forEach((booksWithTag, tagId) => {
-            if (booksWithTag.length < 2) return;
-            const tagColor = booksWithTag[0].tags.find((t) => t.id === tagId)?.color || "#7c3aed";
-            for (let i = 0; i < booksWithTag.length; i++) {
-                for (let j = i + 1; j < booksWithTag.length; j++) {
-                    addConnection(booksWithTag[i], booksWithTag[j], tagColor, "tag");
+            pairSharedTags.forEach(({ bookA, bookB, count, color }) => {
+                addConnection(bookA, bookB, color, "tag", count);
+            });
+        }
+
+        // 著者接続（有効時のみ）
+        if (showAuthorConnections) {
+            const authorToBooks = new Map<string, BookStar[]>();
+            books.forEach((book) => {
+                if (book.author) {
+                    const key = book.author.toLowerCase().trim();
+                    if (!authorToBooks.has(key)) authorToBooks.set(key, []);
+                    authorToBooks.get(key)!.push(book);
                 }
-            }
-        });
+            });
 
-        // 著者接続
-        const authorToBooks = new Map<string, BookStar[]>();
-        books.forEach((book) => {
-            if (book.author) {
-                const key = book.author.toLowerCase().trim();
-                if (!authorToBooks.has(key)) authorToBooks.set(key, []);
-                authorToBooks.get(key)!.push(book);
-            }
-        });
-
-        authorToBooks.forEach((booksWithAuthor) => {
-            if (booksWithAuthor.length < 2) return;
-            for (let i = 0; i < booksWithAuthor.length; i++) {
-                for (let j = i + 1; j < booksWithAuthor.length; j++) {
-                    addConnection(booksWithAuthor[i], booksWithAuthor[j], "#fbbf24", "author");
+            authorToBooks.forEach((booksWithAuthor) => {
+                if (booksWithAuthor.length < 2) return;
+                for (let i = 0; i < booksWithAuthor.length; i++) {
+                    for (let j = i + 1; j < booksWithAuthor.length; j++) {
+                        // 著者接続は中程度の強度
+                        const key = [booksWithAuthor[i].id, booksWithAuthor[j].id].sort().join("-");
+                        if (!connectionSet.has(key)) {
+                            const posA = getPos(booksWithAuthor[i].id);
+                            const posB = getPos(booksWithAuthor[j].id);
+                            if (posA && posB) {
+                                connectionSet.add(key);
+                                lines.push({
+                                    from: posA,
+                                    to: posB,
+                                    color: "#fbbf24",
+                                    type: "author",
+                                    strength: "medium",
+                                    fromId: booksWithAuthor[i].id,
+                                    toId: booksWithAuthor[j].id,
+                                });
+                            }
+                        }
+                    }
                 }
-            }
-        });
+            });
+        }
 
         return lines;
-    }, [books, bookPositions]);
+    }, [books, bookPositions, showTagConnections, showAuthorConnections]);
+
+    // 接続強度でフィルタリング
+    const filteredConnections = useMemo(() => {
+        return connections.filter(conn => {
+            if (connectionStrength === "all") return true;
+            if (connectionStrength === "medium") return conn.strength !== "weak";
+            if (connectionStrength === "strong") return conn.strength === "strong";
+            return true;
+        });
+    }, [connections, connectionStrength]);
+
+    // ホバー中の本に接続している本のIDを計算
+    const connectedBookIds = useMemo(() => {
+        if (!hoveredBookId) return new Set<string>();
+
+        const connected = new Set<string>();
+        connected.add(hoveredBookId);
+
+        connections.forEach(conn => {
+            if (conn.fromId === hoveredBookId) {
+                connected.add(conn.toId);
+            } else if (conn.toId === hoveredBookId) {
+                connected.add(conn.fromId);
+            }
+        });
+
+        return connected;
+    }, [hoveredBookId, connections]);
 
     return (
         <div className="w-full h-full bg-black">
@@ -117,7 +218,7 @@ export function GalaxyCanvas({ books, onBookClick }: GalaxyCanvasProps) {
                 style={{ background: "radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0a 100%)" }}
             >
                 <Suspense fallback={null}>
-                    <Stars radius={300} depth={100} count={8000} factor={4} saturation={0.3} fade speed={0.3} />
+                    <Stars radius={300} depth={100} count={5000} factor={4} saturation={0.3} fade speed={0.2} />
                     <ambientLight intensity={0.2} />
                     <pointLight position={[100, 100, 100]} intensity={0.8} color="#ffffff" />
                     <pointLight position={[-100, -100, -100]} intensity={0.3} color="#7c3aed" />
@@ -125,24 +226,49 @@ export function GalaxyCanvas({ books, onBookClick }: GalaxyCanvasProps) {
                     {books.map((book) => {
                         const pos = bookPositions.get(book.id);
                         if (!pos) return null;
+
+                        // フォーカスモード: ホバー中は関連ノードのみハイライト
+                        const isHighlighted = !hoveredBookId || connectedBookIds.has(book.id);
+                        const isFocused = hoveredBookId === book.id;
+
                         return (
                             <CelestialBody
                                 key={book.id}
                                 book={book}
                                 position={[pos.pos_x, pos.pos_y, pos.pos_z]}
                                 onClick={() => onBookClick?.(book)}
+                                onHover={(isHovered) => onBookHover?.(isHovered ? book.id : null)}
+                                dimmed={hoveredBookId !== null && !isHighlighted}
+                                isFocused={isFocused}
                             />
                         );
                     })}
 
-                    {connections.map((conn, i) => (
-                        <ConnectionLine key={i} start={conn.from} end={conn.to} color={conn.color} type={conn.type} />
-                    ))}
+                    {filteredConnections.map((conn, i) => {
+                        // フォーカスモード: 関連する接続線のみ表示
+                        const isConnectedToHovered =
+                            !hoveredBookId ||
+                            conn.fromId === hoveredBookId ||
+                            conn.toId === hoveredBookId;
+
+                        return (
+                            <ConnectionLine
+                                key={i}
+                                start={conn.from}
+                                end={conn.to}
+                                color={conn.color}
+                                type={conn.type}
+                                strength={conn.strength}
+                                highlighted={isConnectedToHovered && hoveredBookId !== null}
+                                dimmed={hoveredBookId !== null && !isConnectedToHovered}
+                            />
+                        );
+                    })}
 
                     <OrbitControls
                         enablePan enableZoom enableRotate
                         minDistance={20} maxDistance={300}
-                        autoRotate autoRotateSpeed={0.3}
+                        autoRotate autoRotateSpeed={0.15}
                     />
                 </Suspense>
             </Canvas>
@@ -155,10 +281,16 @@ function CelestialBody({
     book,
     position,
     onClick,
+    onHover,
+    dimmed = false,
+    isFocused = false,
 }: {
     book: BookStar;
     position: [number, number, number];
     onClick: () => void;
+    onHover?: (isHovered: boolean) => void;
+    dimmed?: boolean;
+    isFocused?: boolean;
 }) {
     const groupRef = useRef<THREE.Group>(null);
     const [hovered, setHovered] = useState(false);
@@ -193,8 +325,6 @@ function CelestialBody({
                 const y = Math.random() * 256;
                 const r = 30 + Math.random() * 60;
 
-                const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
-                // 16進数カラーに透明度を追加するのは複雑なので、globalAlphaで対応
                 ctx.fillStyle = c;
                 ctx.globalAlpha = 0.5;
                 ctx.beginPath();
@@ -223,22 +353,49 @@ function CelestialBody({
     const isHotStar = hsl.h < 0.1 || hsl.h > 0.9;
     const isCoolStar = hsl.h > 0.5 && hsl.h < 0.7;
 
-    useFrame(() => {
+    // フォーカス時の透明度
+    const targetOpacity = dimmed ? 0.15 : 1;
+
+    // パフォーマンス最適化: Vector3の再利用
+    const targetScaleVec = useMemo(() => new THREE.Vector3(1, 1, 1), []);
+
+    // カメラ距離に応じたラベル表示制御
+    const [showLabel, setShowLabel] = useState(true);
+
+    useFrame(({ camera }) => {
         if (groupRef.current) {
             groupRef.current.rotation.y += 0.002;
-            const targetScale = hovered ? 1.2 : 1;
-            groupRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
+            const targetScale = hovered || isFocused ? 1.3 : 1;
+            targetScaleVec.set(targetScale, targetScale, targetScale);
+            groupRef.current.scale.lerp(targetScaleVec, 0.1);
+
+            // カメラとの距離を計算（パフォーマンス最適化のため10フレームごと）
+            const cameraDistance = camera.position.length();
+            const shouldShowLabel = cameraDistance < 120 || hovered || isFocused;
+            if (shouldShowLabel !== showLabel) {
+                setShowLabel(shouldShowLabel);
+            }
         }
     });
+
+    const handlePointerOver = useCallback(() => {
+        setHovered(true);
+        onHover?.(true);
+    }, [onHover]);
+
+    const handlePointerOut = useCallback(() => {
+        setHovered(false);
+        onHover?.(false);
+    }, [onHover]);
 
     return (
         <group ref={groupRef} position={position}>
             <mesh
                 onClick={onClick}
-                onPointerOver={() => setHovered(true)}
-                onPointerOut={() => setHovered(false)}
+                onPointerOver={handlePointerOver}
+                onPointerOut={handlePointerOut}
             >
-                <sphereGeometry args={[baseSize, 32, 32]} />
+                <sphereGeometry args={[baseSize, 24, 24]} />
                 <meshStandardMaterial
                     color={colors.length === 1 ? baseColor : "#ffffff"}
                     map={marbleTexture}
@@ -246,42 +403,48 @@ function CelestialBody({
                     emissiveIntensity={isHotStar ? 0.8 : 0.4}
                     roughness={isCoolStar ? 0.8 : 0.3}
                     metalness={0.2}
+                    transparent
+                    opacity={targetOpacity}
                 />
             </mesh>
 
             {/* グロー */}
             <mesh>
-                <sphereGeometry args={[baseSize * 1.3, 16, 16]} />
-                <meshBasicMaterial color={baseColor} transparent opacity={0.15} />
+                <sphereGeometry args={[baseSize * 1.3, 12, 12]} />
+                <meshBasicMaterial color={baseColor} transparent opacity={0.15 * targetOpacity} />
             </mesh>
             <mesh>
-                <sphereGeometry args={[baseSize * 1.6, 16, 16]} />
-                <meshBasicMaterial color={baseColor} transparent opacity={0.08} />
+                <sphereGeometry args={[baseSize * 1.6, 12, 12]} />
+                <meshBasicMaterial color={baseColor} transparent opacity={0.08 * targetOpacity} />
             </mesh>
 
-            {hasRing && <PlanetRing size={baseSize} color={baseColor} />}
-            {hasMoons && <OrbitingMoons size={baseSize} />}
-            {hasAurora && <AuroraEffect size={baseSize} />}
-            {hasAsteroidBelt && <AsteroidBelt size={baseSize} />}
+            {hasRing && !dimmed && <PlanetRing size={baseSize} color={baseColor} />}
+            {hasMoons && !dimmed && <OrbitingMoons size={baseSize} />}
+            {hasAurora && !dimmed && <AuroraEffect size={baseSize} />}
+            {hasAsteroidBelt && !dimmed && <AsteroidBelt size={baseSize} />}
 
             {/* 新しいエフェクト */}
-            {emotions.includes("shocking") && <StormEffect size={baseSize} />}
-            {emotions.includes("healed") && <HealingAura size={baseSize} />}
-            {emotions.includes("complex") && <NebulaCloud size={baseSize} />}
-            {emotions.includes("passionate") && <CoronaFlare size={baseSize} color={baseColor} />}
-            {emotions.includes("dark") && <DarkMatter size={baseSize} />}
+            {emotions.includes("shocking") && !dimmed && <StormEffect size={baseSize} />}
+            {emotions.includes("healed") && !dimmed && <HealingAura size={baseSize} />}
+            {emotions.includes("complex") && !dimmed && <NebulaCloud size={baseSize} />}
+            {emotions.includes("passionate") && !dimmed && <CoronaFlare size={baseSize} color={baseColor} />}
+            {emotions.includes("dark") && !dimmed && <DarkMatter size={baseSize} />}
 
-            <Text
-                position={[0, baseSize + 2, 0]}
-                fontSize={1.2}
-                color="white"
-                anchorX="center"
-                anchorY="middle"
-                outlineWidth={0.05}
-                outlineColor="#000000"
-            >
-                {book.title}
-            </Text>
+            {/* タイトル（dimmed時またはズームアウト時は非表示） */}
+            {!dimmed && showLabel && (
+                <Text
+                    position={[0, baseSize + 2, 0]}
+                    fontSize={1.2}
+                    color="white"
+                    anchorX="center"
+                    anchorY="middle"
+                    outlineWidth={0.05}
+                    outlineColor="#000000"
+                    font="https://fonts.gstatic.com/s/notosansjp/v52/-F6jfjtqLzI2JPCgQBnw7HFyzSD-AsregP8VFBEj75s.ttf"
+                >
+                    {book.title}
+                </Text>
+            )}
 
             {hovered && book.author && (
                 <Text
@@ -300,213 +463,244 @@ function CelestialBody({
 
 // 惑星リング
 function PlanetRing({ size, color }: { size: number; color: string }) {
-    const ringRef = useRef<THREE.Mesh>(null);
-    useFrame(() => {
-        if (ringRef.current) ringRef.current.rotation.z += 0.001;
-    });
     return (
-        <mesh ref={ringRef} rotation={[Math.PI / 3, 0, 0]}>
-            <ringGeometry args={[size * 1.8, size * 2.5, 64]} />
-            <meshBasicMaterial color={color} transparent opacity={0.4} side={THREE.DoubleSide} />
+        <mesh rotation={[Math.PI / 2.5, 0, 0]}>
+            <ringGeometry args={[size * 1.5, size * 2, 64]} />
+            <meshBasicMaterial color={color} transparent opacity={0.3} side={THREE.DoubleSide} />
         </mesh>
     );
 }
 
 // 周回衛星
 function OrbitingMoons({ size }: { size: number }) {
-    const moon1Ref = useRef<THREE.Mesh>(null);
-    const moon2Ref = useRef<THREE.Mesh>(null);
-    useFrame((state) => {
-        const t = state.clock.elapsedTime;
-        if (moon1Ref.current) {
-            moon1Ref.current.position.x = Math.cos(t * 0.8) * (size * 2.5);
-            moon1Ref.current.position.z = Math.sin(t * 0.8) * (size * 2.5);
-        }
-        if (moon2Ref.current) {
-            moon2Ref.current.position.x = Math.cos(t * 0.5 + Math.PI) * (size * 3.2);
-            moon2Ref.current.position.y = Math.sin(t * 0.3) * (size * 0.5);
-            moon2Ref.current.position.z = Math.sin(t * 0.5 + Math.PI) * (size * 3.2);
-        }
+    const moonRefs = useRef<THREE.Mesh[]>([]);
+
+    useFrame(({ clock }) => {
+        moonRefs.current.forEach((moon, i) => {
+            if (moon) {
+                const angle = clock.elapsedTime * (0.5 + i * 0.2) + i * Math.PI * 0.66;
+                const radius = size * 2.5 + i * 0.5;
+                moon.position.x = Math.cos(angle) * radius;
+                moon.position.z = Math.sin(angle) * radius;
+                moon.position.y = Math.sin(angle * 0.5) * 0.5;
+            }
+        });
     });
+
     return (
         <>
-            <mesh ref={moon1Ref}>
-                <sphereGeometry args={[size * 0.2, 16, 16]} />
-                <meshStandardMaterial color="#cccccc" />
-            </mesh>
-            <mesh ref={moon2Ref}>
-                <sphereGeometry args={[size * 0.15, 16, 16]} />
-                <meshStandardMaterial color="#aaaaaa" />
-            </mesh>
+            {[0, 1, 2].map((i) => (
+                <mesh key={i} ref={(el) => { if (el) moonRefs.current[i] = el; }}>
+                    <sphereGeometry args={[size * 0.15, 16, 16]} />
+                    <meshStandardMaterial color="#888888" emissive="#444444" emissiveIntensity={0.3} />
+                </mesh>
+            ))}
         </>
     );
 }
 
-// オーロラ
+// 感動のオーラ（Moved）- ソフトなパルスグロー
 function AuroraEffect({ size }: { size: number }) {
-    const auroraRef = useRef<THREE.Mesh>(null);
-    useFrame((state) => {
-        if (auroraRef.current) {
-            auroraRef.current.rotation.y += 0.01;
-            const scale = 1 + Math.sin(state.clock.elapsedTime * 2) * 0.1;
-            auroraRef.current.scale.set(scale, 1, scale);
+    const innerRef = useRef<THREE.Mesh>(null);
+    const outerRef = useRef<THREE.Mesh>(null);
+    const sparkleRef = useRef<THREE.Points>(null);
+
+    // パーティクルの位置を生成
+    const sparklePositions = useMemo(() => {
+        const positions = new Float32Array(30 * 3);
+        for (let i = 0; i < 30; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            const r = size * 1.8 + Math.random() * size * 0.5;
+            positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+            positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+            positions[i * 3 + 2] = r * Math.cos(phi);
+        }
+        return positions;
+    }, [size]);
+
+    useFrame(({ clock }) => {
+        const t = clock.elapsedTime;
+        // ソフトなパルスアニメーション
+        if (innerRef.current) {
+            const scale = 1 + Math.sin(t * 1.5) * 0.15;
+            innerRef.current.scale.setScalar(scale);
+            (innerRef.current.material as THREE.MeshBasicMaterial).opacity = 0.25 + Math.sin(t * 2) * 0.1;
+        }
+        if (outerRef.current) {
+            const scale = 1 + Math.sin(t * 1.2 + 0.5) * 0.1;
+            outerRef.current.scale.setScalar(scale);
+            (outerRef.current.material as THREE.MeshBasicMaterial).opacity = 0.15 + Math.sin(t * 1.8) * 0.08;
+        }
+        if (sparkleRef.current) {
+            sparkleRef.current.rotation.y = t * 0.2;
+            sparkleRef.current.rotation.x = Math.sin(t * 0.3) * 0.1;
         }
     });
+
     return (
-        <mesh ref={auroraRef} position={[0, size * 1.2, 0]}>
-            <torusGeometry args={[size * 0.8, size * 0.1, 8, 32]} />
-            <meshBasicMaterial color="#00ff88" transparent opacity={0.3} />
-        </mesh>
+        <group>
+            {/* 内側のグロー */}
+            <mesh ref={innerRef}>
+                <sphereGeometry args={[size * 1.4, 16, 16]} />
+                <meshBasicMaterial
+                    color="#88ffcc"
+                    transparent
+                    opacity={0.25}
+                    side={THREE.BackSide}
+                />
+            </mesh>
+            {/* 外側のグロー */}
+            <mesh ref={outerRef}>
+                <sphereGeometry args={[size * 1.8, 16, 16]} />
+                <meshBasicMaterial
+                    color="#44ffaa"
+                    transparent
+                    opacity={0.12}
+                    side={THREE.BackSide}
+                />
+            </mesh>
+            {/* 輝くパーティクル */}
+            <points ref={sparkleRef}>
+                <bufferGeometry>
+                    <bufferAttribute
+                        attach="attributes-position"
+                        args={[sparklePositions, 3]}
+                    />
+                </bufferGeometry>
+                <pointsMaterial
+                    color="#aaffdd"
+                    size={0.15}
+                    transparent
+                    opacity={0.7}
+                    sizeAttenuation
+                />
+            </points>
+        </group>
     );
 }
 
 // 小惑星帯
 function AsteroidBelt({ size }: { size: number }) {
     const asteroids = useMemo(() => {
-        const positions: [number, number, number][] = [];
-        for (let i = 0; i < 30; i++) {
-            const angle = (i / 30) * Math.PI * 2 + Math.random() * 0.3;
-            const radius = size * 2.8 + Math.random() * size * 0.5;
-            positions.push([
-                Math.cos(angle) * radius,
-                (Math.random() - 0.5) * size * 0.3,
-                Math.sin(angle) * radius,
-            ]);
-        }
-        return positions;
+        return Array.from({ length: 30 }, (_, i) => ({
+            angle: (i / 30) * Math.PI * 2,
+            radius: size * 2.2 + Math.random() * 0.5,
+            yOffset: (Math.random() - 0.5) * 0.5,
+            size: 0.05 + Math.random() * 0.08,
+        }));
     }, [size]);
 
     return (
-        <group rotation={[Math.PI / 6, 0, 0]}>
-            {asteroids.map((pos, i) => (
-                <mesh key={i} position={pos}>
-                    <dodecahedronGeometry args={[size * 0.08, 0]} />
-                    <meshStandardMaterial color="#888888" roughness={0.9} />
+        <>
+            {asteroids.map((a, i) => (
+                <mesh
+                    key={i}
+                    position={[
+                        Math.cos(a.angle) * a.radius,
+                        a.yOffset,
+                        Math.sin(a.angle) * a.radius,
+                    ]}
+                >
+                    <dodecahedronGeometry args={[a.size]} />
+                    <meshStandardMaterial color="#666666" />
                 </mesh>
             ))}
-        </group>
+        </>
     );
 }
 
 // 台風/大赤斑 (Shocking)
 function StormEffect({ size }: { size: number }) {
-    const stormRef = useRef<THREE.Group>(null);
-    useFrame(() => {
-        if (stormRef.current) {
-            stormRef.current.rotation.z -= 0.05;
+    const ref = useRef<THREE.Mesh>(null);
+
+    useFrame(({ clock }) => {
+        if (ref.current) {
+            ref.current.rotation.z = clock.elapsedTime * 2;
         }
     });
+
     return (
-        <group rotation={[0, 0, Math.PI / 4]}>
-            <group ref={stormRef} position={[size, 0, 0]}>
-                <mesh>
-                    <ringGeometry args={[size * 0.2, size * 0.6, 32]} />
-                    <meshBasicMaterial color="#ef4444" transparent opacity={0.6} side={THREE.DoubleSide} />
-                </mesh>
-                <mesh>
-                    <ringGeometry args={[size * 0.1, size * 0.3, 32]} />
-                    <meshBasicMaterial color="#7f1d1d" transparent opacity={0.8} side={THREE.DoubleSide} />
-                </mesh>
-            </group>
-        </group>
+        <mesh ref={ref} position={[size * 0.6, 0, size * 0.3]}>
+            <circleGeometry args={[size * 0.4, 32]} />
+            <meshBasicMaterial color="#ff4444" transparent opacity={0.6} />
+        </mesh>
     );
 }
 
 // 癒やしのオーラ (Healed)
 function HealingAura({ size }: { size: number }) {
-    const particles = useMemo(() => {
-        return Array.from({ length: 20 }).map(() => ({
-            position: [
-                (Math.random() - 0.5) * size * 3,
-                (Math.random() - 0.5) * size * 3,
-                (Math.random() - 0.5) * size * 3,
-            ] as [number, number, number],
-            scale: Math.random() * 0.5 + 0.5,
-        }));
-    }, [size]);
+    const ref = useRef<THREE.Mesh>(null);
 
-    const groupRef = useRef<THREE.Group>(null);
-    useFrame((state) => {
-        if (groupRef.current) {
-            groupRef.current.rotation.y += 0.005;
-            groupRef.current.position.y = Math.sin(state.clock.elapsedTime) * size * 0.1;
+    useFrame(({ clock }) => {
+        if (ref.current) {
+            const scale = 1 + Math.sin(clock.elapsedTime * 2) * 0.1;
+            ref.current.scale.set(scale, scale, scale);
+            (ref.current.material as THREE.MeshBasicMaterial).opacity = 0.15 + Math.sin(clock.elapsedTime * 3) * 0.05;
         }
     });
 
     return (
-        <group ref={groupRef}>
-            {particles.map((p, i) => (
-                <mesh key={i} position={p.position}>
-                    <sphereGeometry args={[size * 0.1 * p.scale, 8, 8]} />
-                    <meshBasicMaterial color="#4ade80" transparent opacity={0.6} />
-                </mesh>
-            ))}
-        </group>
+        <mesh ref={ref}>
+            <sphereGeometry args={[size * 2, 32, 32]} />
+            <meshBasicMaterial color="#88ff88" transparent opacity={0.15} />
+        </mesh>
     );
 }
 
 // 難解な霧 (Complex)
 function NebulaCloud({ size }: { size: number }) {
-    const cloudRef = useRef<THREE.Mesh>(null);
-    useFrame((state) => {
-        if (cloudRef.current) {
-            cloudRef.current.rotation.x += 0.002;
-            cloudRef.current.rotation.y += 0.003;
-            const s = 1.2 + Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
-            cloudRef.current.scale.set(s, s, s);
+    const ref = useRef<THREE.Mesh>(null);
+
+    useFrame(({ clock }) => {
+        if (ref.current) {
+            ref.current.rotation.y = clock.elapsedTime * 0.1;
+            ref.current.rotation.x = Math.sin(clock.elapsedTime * 0.2) * 0.1;
         }
     });
+
     return (
-        <mesh ref={cloudRef}>
-            <dodecahedronGeometry args={[size * 1.5, 0]} />
-            <meshStandardMaterial color="#94a3b8" transparent opacity={0.3} wireframe />
+        <mesh ref={ref}>
+            <icosahedronGeometry args={[size * 2.5, 1]} />
+            <meshBasicMaterial color="#8844ff" transparent opacity={0.1} wireframe />
         </mesh>
     );
 }
 
 // 情熱のフレア (Passionate)
 function CoronaFlare({ size, color }: { size: number, color: THREE.Color | string }) {
-    const flareRef = useRef<THREE.Mesh>(null);
-    useFrame((state) => {
-        if (flareRef.current) {
-            const s = 1.3 + Math.sin(state.clock.elapsedTime * 10) * 0.1 + Math.random() * 0.1;
-            flareRef.current.scale.set(s, s, s);
+    const ref = useRef<THREE.Points>(null);
+
+    useFrame(({ clock }) => {
+        if (ref.current) {
+            ref.current.rotation.y = clock.elapsedTime * 0.5;
         }
     });
+
     return (
-        <mesh ref={flareRef}>
-            <sphereGeometry args={[size, 32, 32]} />
-            <meshBasicMaterial color={color} transparent opacity={0.4} blending={THREE.AdditiveBlending} />
-        </mesh>
+        <points ref={ref}>
+            <sphereGeometry args={[size * 1.8, 16, 16]} />
+            <pointsMaterial color={color} size={0.1} transparent opacity={0.4} />
+        </points>
     );
 }
 
 // 暗黒物質 (Dark)
 function DarkMatter({ size }: { size: number }) {
-    const particles = useMemo(() => {
-        return Array.from({ length: 40 }).map(() => ({
-            position: [
-                (Math.random() - 0.5) * size * 4,
-                (Math.random() - 0.5) * size * 4,
-                (Math.random() - 0.5) * size * 4,
-            ] as [number, number, number],
-        }));
-    }, [size]);
+    const ref = useRef<THREE.Mesh>(null);
 
-    const groupRef = useRef<THREE.Group>(null);
-    useFrame(() => {
-        if (groupRef.current) groupRef.current.rotation.y -= 0.005;
+    useFrame(({ clock }) => {
+        if (ref.current) {
+            ref.current.rotation.x = clock.elapsedTime * 0.2;
+            ref.current.rotation.y = clock.elapsedTime * 0.3;
+        }
     });
 
     return (
-        <group ref={groupRef}>
-            {particles.map((p, i) => (
-                <mesh key={i} position={p.position}>
-                    <boxGeometry args={[size * 0.1, size * 0.1, size * 0.1]} />
-                    <meshBasicMaterial color="#000000" />
-                </mesh>
-            ))}
-        </group>
+        <mesh ref={ref}>
+            <torusKnotGeometry args={[size * 1.5, size * 0.2, 64, 8, 2, 3]} />
+            <meshBasicMaterial color="#220033" transparent opacity={0.3} />
+        </mesh>
     );
 }
 
@@ -516,19 +710,36 @@ function ConnectionLine({
     end,
     color,
     type,
+    strength,
+    highlighted = false,
+    dimmed = false,
 }: {
     start: [number, number, number];
     end: [number, number, number];
     color: string;
     type: ConnectionType;
+    strength: ConnectionStrength;
+    highlighted?: boolean;
+    dimmed?: boolean;
 }) {
+    // 強度に応じた線の太さ
+    const lineWidth = strength === "strong" ? 2 : strength === "medium" ? 1.5 : 1;
+
+    // フォーカスモードでの透明度
+    let opacity = 0.15; // デフォルトは薄く表示
+    if (highlighted) {
+        opacity = 0.6; // ハイライト時は明るく
+    } else if (dimmed) {
+        opacity = 0.05; // 非関連は極薄
+    }
+
     return (
         <Line
             points={[start, end]}
             color={color}
-            lineWidth={type === "author" ? 2 : 1}
+            lineWidth={lineWidth}
             transparent
-            opacity={0.4}
+            opacity={opacity}
             dashed={type === "author"}
             dashSize={type === "author" ? 2 : 0}
             gapSize={type === "author" ? 1 : 0}

@@ -7,7 +7,7 @@ import { createBook } from "@/lib/actions/books";
 import { FirstBookCelebration } from "@/components/galaxy/BigBangAnimation";
 import { BookSearch } from "@/components/books/BookSearch";
 import { ColorEmotionPicker } from "@/components/books/ColorEmotionPicker";
-import { suggestTags } from "@/lib/gemini";
+import { suggestTagsAndCategories } from "@/lib/gemini";
 
 interface BookFormData {
     title: string;
@@ -48,6 +48,7 @@ export default function NewBookPage() {
 
     // AIタグ提案
     const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
+    const [suggestedCategories, setSuggestedCategories] = useState<string[]>([]);
     const [isSuggestingTags, setIsSuggestingTags] = useState(false);
 
     // Google Books検索結果から自動入力
@@ -214,15 +215,33 @@ export default function NewBookPage() {
 
                                     <div>
                                         <label className="block text-sm text-white/80 mb-2">
-                                            📚 カテゴリ（API自動取得）
+                                            📚 カテゴリ（API自動取得 / AI提案）
                                         </label>
                                         <input
                                             type="text"
                                             value={formData.tags}
-                                            readOnly
-                                            className="w-full px-4 py-3 bg-white/10 border border-white/10 rounded-lg text-white/60 cursor-not-allowed"
+                                            onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                                            className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-purple-500 transition-colors"
                                             placeholder="検索から自動入力されます"
                                         />
+                                        {suggestedCategories.length > 0 && (
+                                            <div className="mt-2 flex flex-wrap gap-2">
+                                                {suggestedCategories.map((cat, i) => (
+                                                    <button
+                                                        key={i}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const newCats = formData.tags ? `${formData.tags}, ${cat}` : cat;
+                                                            setFormData({ ...formData, tags: newCats });
+                                                            setSuggestedCategories(suggestedCategories.filter((_, idx) => idx !== i));
+                                                        }}
+                                                        className="px-2 py-1 text-xs bg-cyan-500/20 text-cyan-300 rounded-full hover:bg-cyan-500/40 transition-colors"
+                                                    >
+                                                        + {cat}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-sm text-white/80 mb-2">
@@ -241,12 +260,20 @@ export default function NewBookPage() {
                                                 disabled={!formData.title || isSuggestingTags}
                                                 onClick={async () => {
                                                     setIsSuggestingTags(true);
-                                                    const tags = await suggestTags(
-                                                        formData.title,
-                                                        formData.author,
-                                                        formData.description || undefined
-                                                    );
-                                                    setSuggestedTags(tags);
+                                                    try {
+                                                        const result = await suggestTagsAndCategories(
+                                                            formData.title,
+                                                            formData.author,
+                                                            formData.description || undefined
+                                                        );
+                                                        setSuggestedTags(result.tags);
+                                                        // カテゴリが空の場合のみAI提案カテゴリを表示
+                                                        if (!formData.tags) {
+                                                            setSuggestedCategories(result.categories);
+                                                        }
+                                                    } catch (err: any) {
+                                                        setError(err.message || 'AI提案に失敗しました');
+                                                    }
                                                     setIsSuggestingTags(false);
                                                 }}
                                                 className="px-3 py-1.5 text-sm bg-gradient-to-r from-purple-600/50 to-cyan-600/50 rounded-lg text-white hover:from-purple-600 hover:to-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-1"
@@ -257,24 +284,47 @@ export default function NewBookPage() {
                                                         提案中...
                                                     </>
                                                 ) : (
-                                                    <>✨ AIにタグを提案してもらう</>
+                                                    <>✨ AIに提案してもらう</>
                                                 )}
                                             </button>
-                                            {suggestedTags.map((tag, i) => (
+                                            {suggestedTags.length > 0 && (
                                                 <button
-                                                    key={i}
                                                     type="button"
                                                     onClick={() => {
-                                                        const newTags = customTags ? `${customTags}, ${tag}` : tag;
-                                                        setCustomTags(newTags);
-                                                        setSuggestedTags(suggestedTags.filter((_, idx) => idx !== i));
+                                                        setIsSuggestingTags(true);
+                                                        suggestTagsAndCategories(
+                                                            formData.title,
+                                                            formData.author,
+                                                            formData.description || undefined
+                                                        ).then(result => {
+                                                            setSuggestedTags(result.tags);
+                                                            setIsSuggestingTags(false);
+                                                        }).catch(() => setIsSuggestingTags(false));
                                                     }}
-                                                    className="px-2 py-1 text-xs bg-purple-500/20 text-purple-300 rounded-full hover:bg-purple-500/40 transition-colors"
+                                                    className="px-2 py-1 text-xs text-white/50 hover:text-white/80 transition-colors"
                                                 >
-                                                    + #{tag}
+                                                    🔄 別の候補
                                                 </button>
-                                            ))}
+                                            )}
                                         </div>
+                                        {suggestedTags.length > 0 && (
+                                            <div className="mt-2 flex flex-wrap gap-2">
+                                                {suggestedTags.map((tag, i) => (
+                                                    <button
+                                                        key={i}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const newTags = customTags ? `${customTags}, ${tag}` : tag;
+                                                            setCustomTags(newTags);
+                                                            setSuggestedTags(suggestedTags.filter((_, idx) => idx !== i));
+                                                        }}
+                                                        className="px-2 py-1 text-xs bg-purple-500/20 text-purple-300 rounded-full hover:bg-purple-500/40 transition-colors"
+                                                    >
+                                                        + #{tag}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                         <p className="mt-1 text-xs text-white/40">
                                             カンマ区切りで複数入力できます
                                         </p>

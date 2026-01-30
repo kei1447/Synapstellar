@@ -39,6 +39,9 @@ export function BookSearch({ onSelectBook }: BookSearchProps) {
     const [showResults, setShowResults] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
+    // Kindle ASINかどうかを判定（Bで始まる10桁）
+    const isKindleAsin = (text: string) => /^B[A-Z0-9]{9}$/i.test(text.trim());
+
     // 外部クリックでドロップダウンを閉じる
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -181,7 +184,14 @@ export function BookSearch({ onSelectBook }: BookSearchProps) {
 
             {showResults && results.length === 0 && query.length >= 2 && !isSearching && (
                 <div className="absolute left-0 right-0 z-[100] mt-2 bg-gray-900/95 backdrop-blur-sm border border-white/20 rounded-lg p-4 text-white/60 text-center">
-                    見つかりませんでした。下のフォームに直接入力してください。
+                    {isKindleAsin(query) ? (
+                        <>
+                            <p className="text-yellow-400 mb-1">📱 Kindle版のASINは検索できません</p>
+                            <p className="text-sm">本のタイトルで検索するか、紙版のISBNを入力してください</p>
+                        </>
+                    ) : (
+                        <>見つかりませんでした。下のフォームに直接入力してください。</>
+                    )}
                 </div>
             )}
 

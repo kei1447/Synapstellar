@@ -3,7 +3,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { EditBookForm } from "@/components/books/EditBookForm";
 
-export default async function EditBookPage({ params }: { params: { bookId: string } }) {
+export default async function EditBookPage({ params }: { params: Promise<{ bookId: string }> }) {
+    const { bookId } = await params;
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -24,7 +25,7 @@ export default async function EditBookPage({ params }: { params: { bookId: strin
         emotion
       )
     `)
-        .eq("id", params.bookId)
+        .eq("id", bookId)
         .eq("user_id", user.id)
         .single();
 

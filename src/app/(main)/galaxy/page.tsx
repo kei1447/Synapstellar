@@ -26,6 +26,7 @@ export default async function GalaxyPage() {
         rating: book.rating,
         image_color: book.image_color,
         emotion_tags: book.emotion_tags || [],
+        read_date: book.read_date,
         tags: book.tags || [],
     }));
 

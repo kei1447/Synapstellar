@@ -45,12 +45,20 @@ export default async function BooksPage() {
                         <h2 className="text-3xl font-bold text-white mb-2">本の管理</h2>
                         <p className="text-white/60">登録した本の一覧</p>
                     </div>
-                    <Link
-                        href="/books/new"
-                        className="px-6 py-3 bg-gradient-to-r from-purple-600 to-cyan-600 rounded-lg font-semibold text-white hover:opacity-90 transition-opacity"
-                    >
-                        + 本を追加
-                    </Link>
+                    <div className="flex gap-3">
+                        <Link
+                            href="/books/search"
+                            className="px-6 py-3 border border-white/20 rounded-lg font-semibold text-white hover:bg-white/10 transition-all flex items-center gap-2"
+                        >
+                            🔍 検索
+                        </Link>
+                        <Link
+                            href="/books/new"
+                            className="px-6 py-3 bg-gradient-to-r from-purple-600 to-cyan-600 rounded-lg font-semibold text-white hover:opacity-90 transition-opacity"
+                        >
+                            + 本を追加
+                        </Link>
+                    </div>
                 </div>
 
                 {books.length === 0 ? (

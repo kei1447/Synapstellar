@@ -1,0 +1,424 @@
+.bookHeader {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 32px;
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.coverWrapper {
+    flex-shrink: 0;
+}
+
+.cover {
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.bookInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bookTitle {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.author {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+}
+
+.rating {
+    color: #fbbf24;
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+}
+
+.editLink {
+    margin-top: auto;
+    color: #a78bfa;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.editLink:hover {
+    color: #c4b5fd;
+}
+
+/* タブ */
+.tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    padding: 4px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+}
+
+.tab {
+    flex: 1;
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tab:hover {
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.tab.active {
+    background: rgba(124, 58, 237, 0.3);
+    color: #fff;
+}
+
+.tabContent {
+    min-height: 400px;
+}
+
+/* 基本情報タブ */
+.infoTab {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.section {
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+}
+
+.sectionTitle {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0 0 12px 0;
+}
+
+.tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tag {
+    padding: 6px 14px;
+    border-radius: 16px;
+    font-size: 0.85rem;
+    color: #fff;
+}
+
+.emotions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.emotion {
+    padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.memo,
+.description {
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.7;
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+/* 登場人物タブ */
+.charactersTab {
+    /* styles from CharacterList */
+}
+
+.characterActions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.addButton {
+    background: linear-gradient(135deg, #7c3aed, #a78bfa);
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.addButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+}
+
+.addExistingButton {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.addExistingButton:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* 相関図タブ */
+.graphTab {
+    position: relative;
+}
+
+.addRelationButton {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: rgba(124, 58, 237, 0.2);
+    border: 1px solid rgba(124, 58, 237, 0.5);
+    color: #a78bfa;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    z-index: 10;
+}
+
+.addRelationButton:hover {
+    background: rgba(124, 58, 237, 0.3);
+}
+
+/* モーダル */
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+}
+
+.modal {
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+/* 既存人物追加モーダル */
+.existingModal {
+    background: #1a1a2e;
+    border-radius: 16px;
+    padding: 24px;
+    width: 400px;
+    max-width: 100%;
+}
+
+.existingModal h3 {
+    color: #fff;
+    margin: 0 0 8px 0;
+    font-size: 1.2rem;
+}
+
+.hint {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+    margin: 0 0 20px 0;
+}
+
+.existingList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+}
+
+.existingItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.existingItem:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #7c3aed;
+}
+
+.existingItem:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.existingName {
+    font-weight: 500;
+}
+
+.existingNickname {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.9rem;
+}
+
+/* 関係追加モーダル */
+.relationshipModal {
+    background: #1a1a2e;
+    border-radius: 16px;
+    padding: 24px;
+    width: 450px;
+    max-width: 100%;
+}
+
+.relationshipModal h3 {
+    color: #fff;
+    margin: 0 0 20px 0;
+    font-size: 1.2rem;
+}
+
+.relationshipForm {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.select {
+    flex: 1;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.95rem;
+}
+
+.select:focus {
+    outline: none;
+    border-color: #7c3aed;
+}
+
+.arrow {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1.2rem;
+}
+
+.input {
+    width: 100%;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1rem;
+    margin-bottom: 20px;
+}
+
+.input:focus {
+    outline: none;
+    border-color: #7c3aed;
+}
+
+.input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.modalActions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.cancelButton {
+    padding: 10px 20px;
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cancelButton:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #fff;
+}
+
+.submitButton {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #7c3aed, #a78bfa);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.submitButton:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+}
+
+.submitButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* レスポンシブ */
+@media (max-width: 640px) {
+    .bookHeader {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .tabs {
+        flex-wrap: wrap;
+    }
+
+    .tab {
+        flex: none;
+        width: calc(50% - 2px);
+    }
+
+    .relationshipForm {
+        flex-direction: column;
+    }
+
+    .arrow {
+        transform: rotate(90deg);
+    }
+}

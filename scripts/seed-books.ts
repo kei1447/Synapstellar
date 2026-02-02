@@ -168,8 +168,8 @@ async function seedBooks() {
                     .single();
 
                 if (!tagError && newTag) {
-                    tagId = newTag.id;
-                    tagMap.set(tagName, tagId);
+                    tagId = newTag.id as string;
+                    tagMap.set(tagName, newTag.id as string);
                 }
             }
 

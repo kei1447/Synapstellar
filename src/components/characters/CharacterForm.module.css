@@ -1,0 +1,222 @@
+.form {
+    background: #1a1a2e;
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 24px 0;
+}
+
+.field {
+    margin-bottom: 20px;
+}
+
+.label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 8px;
+}
+
+.input {
+    width: 100%;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.input:focus {
+    outline: none;
+    border-color: #7c3aed;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.textarea {
+    width: 100%;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1rem;
+    resize: vertical;
+    font-family: inherit;
+    transition: all 0.2s;
+}
+
+.textarea:focus {
+    outline: none;
+    border-color: #7c3aed;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.nicknameInput {
+    display: flex;
+    gap: 8px;
+}
+
+.nicknameInput .input {
+    flex: 1;
+}
+
+.addButton {
+    padding: 12px 20px;
+    background: rgba(124, 58, 237, 0.2);
+    border: 1px solid rgba(124, 58, 237, 0.5);
+    border-radius: 8px;
+    color: #a78bfa;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.addButton:hover:not(:disabled) {
+    background: rgba(124, 58, 237, 0.3);
+}
+
+.addButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.nicknames {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.nickname {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.85rem;
+}
+
+.removeNickname {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    padding: 0;
+    font-size: 1rem;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.removeNickname:hover {
+    color: #ef4444;
+}
+
+.attributes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.attributeChip {
+    padding: 6px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.attributeChip:hover {
+    border-color: var(--attr-color);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.attributeChip.selected {
+    background: var(--attr-color);
+    border-color: var(--attr-color);
+    color: #fff;
+}
+
+.newAttribute {
+    display: flex;
+    gap: 8px;
+}
+
+.newAttribute .input {
+    flex: 1;
+}
+
+.actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cancelButton {
+    padding: 12px 24px;
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cancelButton:hover:not(:disabled) {
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #fff;
+}
+
+.submitButton {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #7c3aed, #a78bfa);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.submitButton:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+}
+
+.submitButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

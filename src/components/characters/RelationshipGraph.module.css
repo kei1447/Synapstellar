@@ -1,0 +1,118 @@
+.container {
+    padding: 20px;
+}
+
+.title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 16px 0;
+}
+
+.graphWrapper {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.graph {
+    width: 100%;
+    height: auto;
+    min-height: 400px;
+}
+
+.node {
+    transition: transform 0.2s ease;
+}
+
+.node:hover circle {
+    fill: rgba(124, 58, 237, 0.5);
+    stroke-width: 3;
+}
+
+.nodeLabel {
+    fill: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    pointer-events: none;
+}
+
+.edge line {
+    transition: stroke 0.2s;
+}
+
+.edge:hover line {
+    stroke: rgba(167, 139, 250, 0.8);
+    stroke-width: 3;
+}
+
+.edgeLabel {
+    fill: rgba(255, 255, 255, 0.7);
+    font-size: 11px;
+}
+
+.empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+}
+
+.empty p {
+    margin: 0;
+}
+
+.legend {
+    margin-top: 20px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+}
+
+.legendTitle {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0 0 12px 0;
+}
+
+.legendList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.legendItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    flex-wrap: wrap;
+}
+
+.legendFrom,
+.legendTo {
+    color: #a78bfa;
+    font-weight: 500;
+}
+
+.legendArrow {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.legendType {
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(124, 58, 237, 0.2);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.legendDesc {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.8rem;
+}

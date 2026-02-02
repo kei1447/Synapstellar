@@ -1,0 +1,179 @@
+.searchBar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 32px;
+}
+
+.inputWrapper {
+    flex: 1;
+    position: relative;
+}
+
+.searchIcon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2rem;
+}
+
+.input {
+    width: 100%;
+    padding: 16px 48px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    color: #fff;
+    font-size: 1.1rem;
+    transition: all 0.2s;
+}
+
+.input:focus {
+    outline: none;
+    border-color: #7c3aed;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.spinner {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.scanButton {
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #7c3aed, #06b6d4);
+    border: none;
+    border-radius: 16px;
+    color: #fff;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.scanButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4);
+}
+
+/* ヒント */
+.hints {
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    text-align: center;
+}
+
+.hintsTitle {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1rem;
+    margin-bottom: 12px;
+}
+
+.hintsList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+}
+
+.hintsList li {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.9rem;
+}
+
+/* 検索結果 */
+.resultsSection {
+    margin-bottom: 48px;
+}
+
+.resultsCount {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+}
+
+.resultsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.noResults {
+    text-align: center;
+    padding: 48px;
+}
+
+.noResultsText {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1.1rem;
+    margin-bottom: 16px;
+}
+
+.manualLink {
+    color: #a78bfa;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.manualLink:hover {
+    color: #c4b5fd;
+}
+
+/* フッター */
+.footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footerText {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.manualButton {
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.manualButton:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* レスポンシブ */
+@media (max-width: 640px) {
+    .searchBar {
+        flex-direction: column;
+    }
+
+    .hintsList {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .resultsGrid {
+        grid-template-columns: 1fr;
+    }
+}

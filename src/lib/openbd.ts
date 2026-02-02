@@ -1,10 +1,10 @@
 /**
  * OpenBD API クライアント
  * 日本の書籍情報を無料で取得できるAPI
- * OpenBD API クライアント
- * 日本の書籍情報を無料で取得できるAPI
  * https://openbd.jp/
  */
+
+import { getCoverByISBN } from "@/lib/google-books";
 
 export interface OpenBDBook {
     isbn: string;
@@ -59,6 +59,25 @@ interface OpenBDResponse {
         pubdate?: string;
         cover?: string;
     };
+}
+
+/**
+ * 書影URLのフォールバック処理
+ * OpenBDに書影がない場合、Google Books APIから取得
+ */
+async function getCoverUrlWithFallback(openBdCover: string | null, isbn: string): Promise<string | null> {
+    if (openBdCover) {
+        return openBdCover;
+    }
+
+    // OpenBDに書影がない場合、Google Booksから取得
+    try {
+        const googleCover = await getCoverByISBN(isbn);
+        return googleCover;
+    } catch (error) {
+        console.warn("Failed to get cover from Google Books:", error);
+        return null;
+    }
 }
 
 /**
@@ -120,7 +139,7 @@ export async function searchByISBN(isbn: string): Promise<OpenBDBook | null> {
             author: summary?.author || "",
             publisher: summary?.publisher || "",
             pubdate: summary?.pubdate || "",
-            coverUrl: summary?.cover || null,
+            coverUrl: await getCoverUrlWithFallback(summary?.cover || null, cleanIsbn),
             description,
             pageCount,
             categories,

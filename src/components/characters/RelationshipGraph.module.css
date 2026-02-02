@@ -116,3 +116,39 @@
     color: rgba(255, 255, 255, 0.5);
     font-size: 0.8rem;
 }
+
+/* グループスタイル */
+.group rect {
+    transition: all 0.3s ease;
+}
+
+.group:hover rect {
+    stroke-width: 3;
+}
+
+.groupLabel {
+    font-size: 13px;
+    font-weight: 600;
+    pointer-events: none;
+}
+
+.groupLegend {
+    margin-top: 16px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+}
+
+.groupTags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.groupTag {
+    padding: 6px 12px;
+    border: 2px solid;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}

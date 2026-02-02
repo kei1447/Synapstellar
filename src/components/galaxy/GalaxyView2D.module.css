@@ -1,0 +1,247 @@
+.container {
+    min-height: 100vh;
+    background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0a 100%);
+    padding: 100px 24px 24px 24px;
+    /* ヘッダー分の余白を追加 */
+}
+
+/* コントロールバー */
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tagFilter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tagButton {
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tagButton:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.tagButtonActive {
+    background: rgba(124, 58, 237, 0.3);
+    border-color: #7c3aed;
+    color: white;
+}
+
+.sortControls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sortLabel {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+}
+
+.sortButton {
+    padding: 6px 12px;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 8px;
+}
+
+.sortButton:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.sortButtonActive {
+    color: white;
+    background: rgba(124, 58, 237, 0.3);
+}
+
+/* 本のグリッド */
+.bookGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+@media (min-width: 768px) {
+    .bookGrid {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    }
+}
+
+@media (min-width: 1200px) {
+    .bookGrid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    }
+}
+
+/* 本カード */
+.bookCard {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    overflow: hidden;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.bookCard:hover {
+    transform: translateY(-4px);
+    border-color: var(--star-color, #7c3aed);
+    box-shadow: 0 8px 32px rgba(124, 58, 237, 0.2),
+        0 0 20px color-mix(in srgb, var(--star-color) 30%, transparent);
+}
+
+.dimmed {
+    opacity: 0.3;
+}
+
+/* 星のグロー効果 */
+.starGlow {
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    filter: blur(30px);
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+/* 表紙 */
+.coverWrapper {
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+.cover {
+    height: 100%;
+    width: auto;
+    object-fit: contain;
+}
+
+.starIcon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: white;
+    box-shadow: 0 0 20px currentColor;
+}
+
+/* 情報 */
+.info {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: white;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.author {
+    margin: 0;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.8rem;
+}
+
+.rating {
+    color: #fbbf24;
+}
+
+.date {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.tag {
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+/* 空状態 */
+.empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1.1rem;
+}
+
+.addButton {
+    margin-top: 16px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #7c3aed, #06b6d4);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.addButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4);
+}

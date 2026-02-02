@@ -133,3 +133,19 @@ export function getCoverImageUrl(imageLinks?: GoogleBookVolume["volumeInfo"]["im
     // HTTPをHTTPSに変換
     return url.replace("http://", "https://");
 }
+
+/**
+ * ISBNから書影URLのみを取得（OpenBDのフォールバック用）
+ */
+export async function getCoverByISBN(isbn: string): Promise<string | null> {
+    try {
+        const book = await searchByISBN(isbn);
+        if (book) {
+            return getCoverImageUrl(book.volumeInfo.imageLinks);
+        }
+        return null;
+    } catch (error) {
+        console.error("Error fetching cover by ISBN:", error);
+        return null;
+    }
+}

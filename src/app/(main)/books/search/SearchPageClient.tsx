@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { searchGoogleBooks } from "@/lib/google-books";
@@ -76,20 +76,20 @@ export function SearchPageClient() {
         setIsSearching(false);
     }, []);
 
-    // デバウンス検索
-    useEffect(() => {
+    // 検索ボタン押下時
+    const handleSearch = () => {
         if (query.length < 2) {
-            setResults([]);
-            setHasSearched(false);
             return;
         }
+        performSearch(query);
+    };
 
-        const timer = setTimeout(() => {
-            performSearch(query);
-        }, 500);
-
-        return () => clearTimeout(timer);
-    }, [query, performSearch]);
+    // Enterキーで検索
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleSearch();
+        }
+    };
 
     // 本を選択して登録ページへ
     const handleSelectBook = (book: SearchResult) => {
@@ -152,6 +152,7 @@ export function SearchPageClient() {
                             type="text"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
+                            onKeyDown={handleKeyDown}
                             className={styles.input}
                             placeholder="タイトル、著者、またはISBNを入力..."
                             autoFocus
@@ -164,10 +165,18 @@ export function SearchPageClient() {
                     </div>
                     <button
                         type="button"
+                        onClick={handleSearch}
+                        disabled={query.length < 2 || isSearching}
+                        className={styles.searchButton}
+                    >
+                        {isSearching ? "検索中..." : "検索"}
+                    </button>
+                    <button
+                        type="button"
                         onClick={() => setShowScanner(true)}
                         className={styles.scanButton}
                     >
-                        📷 バーコード
+                        📷
                     </button>
                 </div>
 

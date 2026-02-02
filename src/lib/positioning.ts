@@ -155,5 +155,72 @@ export function calculateBookPositions(books: BookForPositioning[]): Map<string,
         });
     });
 
+    // 衝突回避処理を実行
+    resolveCollisions(positions);
+
     return positions;
+}
+
+/**
+ * 星同士の衝突を回避する
+ * Force-directed風の斥力シミュレーション
+ */
+function resolveCollisions(
+    positions: Map<string, PositionedBook>,
+    minDistance: number = 18,
+    iterations: number = 50
+): void {
+    const books = Array.from(positions.values());
+
+    if (books.length < 2) return;
+
+    for (let iter = 0; iter < iterations; iter++) {
+        let hasCollision = false;
+
+        for (let i = 0; i < books.length; i++) {
+            for (let j = i + 1; j < books.length; j++) {
+                const a = books[i];
+                const b = books[j];
+
+                const dx = b.pos_x - a.pos_x;
+                const dy = b.pos_y - a.pos_y;
+                const dz = b.pos_z - a.pos_z;
+                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                if (dist < minDistance && dist > 0.01) {
+                    hasCollision = true;
+
+                    // 押し出し量を計算
+                    const overlap = (minDistance - dist) / 2;
+                    const pushX = (dx / dist) * overlap;
+                    const pushY = (dy / dist) * overlap;
+                    const pushZ = (dz / dist) * overlap;
+
+                    // 両方向に押し出す
+                    a.pos_x -= pushX;
+                    a.pos_y -= pushY;
+                    a.pos_z -= pushZ;
+                    b.pos_x += pushX;
+                    b.pos_y += pushY;
+                    b.pos_z += pushZ;
+                } else if (dist < 0.01) {
+                    // 完全に重なっている場合はランダムに離す
+                    hasCollision = true;
+                    const randomAngle = Math.random() * Math.PI * 2;
+                    const randomPush = minDistance / 2;
+                    b.pos_x += Math.cos(randomAngle) * randomPush;
+                    b.pos_z += Math.sin(randomAngle) * randomPush;
+                    b.pos_y += (Math.random() - 0.5) * randomPush;
+                }
+            }
+        }
+
+        // 衝突がなくなったら早期終了
+        if (!hasCollision) break;
+    }
+
+    // 更新された位置をMapに反映
+    books.forEach(book => {
+        positions.set(book.id, book);
+    });
 }

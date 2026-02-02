@@ -53,7 +53,7 @@ export default async function BooksPage() {
                             🔍 検索
                         </Link>
                         <Link
-                            href="/books/new"
+                            href="/books/search"
                             className="px-6 py-3 bg-gradient-to-r from-purple-600 to-cyan-600 rounded-lg font-semibold text-white hover:opacity-90 transition-opacity"
                         >
                             + 本を追加
@@ -93,7 +93,10 @@ function BookCard({ book }: { book: any }) {
     const tags = book.book_tags?.map((bt: any) => bt.tags).filter(Boolean) || [];
 
     return (
-        <div className="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all group">
+        <Link
+            href={`/books/${book.id}`}
+            className="block p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all group cursor-pointer"
+        >
             <div className="flex justify-between items-start mb-4">
                 <h3 className="text-lg font-semibold text-white group-hover:text-purple-300 transition-colors line-clamp-2">
                     {book.title}
@@ -136,15 +139,13 @@ function BookCard({ book }: { book: any }) {
                     </span>
                 )}
                 <div className="flex gap-2 ml-auto">
-                    <Link
-                        href={`/books/${book.id}/edit`}
-                        className="px-3 py-1 text-sm text-white/60 hover:text-white border border-white/20 rounded hover:bg-white/10 transition-all"
+                    <span
+                        className="px-3 py-1 text-sm text-purple-300 border border-purple-500/30 rounded hover:bg-purple-500/20 transition-all"
                     >
-                        編集
-                    </Link>
-                    <DeleteBookButton bookId={book.id} />
+                        詳細 →
+                    </span>
                 </div>
             </div>
-        </div>
+        </Link>
     );
 }

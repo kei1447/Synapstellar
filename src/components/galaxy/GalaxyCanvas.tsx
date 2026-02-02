@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Stars, Text, Line } from "@react-three/drei";
+import { OrbitControls, Stars, Text, Line, Billboard } from "@react-three/drei";
 import { Suspense, useMemo, useRef, useState, useCallback, useEffect } from "react";
 import * as THREE from "three";
 import { calculateBookPositions } from "@/lib/positioning";
@@ -432,30 +432,34 @@ function CelestialBody({
 
             {/* タイトル（dimmed時またはズームアウト時は非表示） */}
             {!dimmed && showLabel && (
-                <Text
-                    position={[0, baseSize + 2, 0]}
-                    fontSize={1.2}
-                    color="white"
-                    anchorX="center"
-                    anchorY="middle"
-                    outlineWidth={0.05}
-                    outlineColor="#000000"
-                    font="https://fonts.gstatic.com/s/notosansjp/v52/-F6jfjtqLzI2JPCgQBnw7HFyzSD-AsregP8VFBEj75s.ttf"
-                >
-                    {book.title}
-                </Text>
+                <Billboard follow lockX={false} lockY={false} lockZ={false}>
+                    <Text
+                        position={[0, baseSize + 2, 0]}
+                        fontSize={1.2}
+                        color="white"
+                        anchorX="center"
+                        anchorY="middle"
+                        outlineWidth={0.05}
+                        outlineColor="#000000"
+                        font="https://fonts.gstatic.com/s/notosansjp/v52/-F6jfjtqLzI2JPCgQBnw7HFyzSD-AsregP8VFBEj75s.ttf"
+                    >
+                        {book.title}
+                    </Text>
+                </Billboard>
             )}
 
             {hovered && book.author && (
-                <Text
-                    position={[0, baseSize + 3.5, 0]}
-                    fontSize={0.9}
-                    color="#a0a0a0"
-                    anchorX="center"
-                    anchorY="middle"
-                >
-                    {book.author}
-                </Text>
+                <Billboard follow lockX={false} lockY={false} lockZ={false}>
+                    <Text
+                        position={[0, baseSize + 3.5, 0]}
+                        fontSize={0.9}
+                        color="#a0a0a0"
+                        anchorX="center"
+                        anchorY="middle"
+                    >
+                        {book.author}
+                    </Text>
+                </Billboard>
             )}
         </group>
     );

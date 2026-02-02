@@ -34,23 +34,61 @@ export function RelationshipGraph({
     relationships,
     onCharacterClick
 }: RelationshipGraphProps) {
-    // ノードの配置を計算（円形配置）
+    // 属性ごとにキャラクターをグループ化
+    const attributeGroups = useMemo(() => {
+        const groups = new Map<string, {
+            id: string;
+            name: string;
+            color: string;
+            characterIds: Set<string>;
+        }>();
+
+        characters.forEach((char) => {
+            char.attributes?.forEach((attr) => {
+                if (!groups.has(attr.id)) {
+                    groups.set(attr.id, {
+                        id: attr.id,
+                        name: attr.name,
+                        color: attr.color || '#7c3aed',
+                        characterIds: new Set(),
+                    });
+                }
+                groups.get(attr.id)!.characterIds.add(char.id);
+            });
+        });
+
+        // 1人以上のグループを返す（属性を持つ人物がいればグループ表示）
+        return Array.from(groups.values()).filter(g => g.characterIds.size >= 1);
+    }, [characters]);
+
+    // ノードの配置を計算（グループを考慮した配置）
     const nodes = useMemo<Node[]>(() => {
-        const centerX = 300
-        const centerY = 250
-        const radius = 180
+        const centerX = 300;
+        const centerY = 250;
+        const radius = 180;
+
+        // グループに属するキャラクターの位置を調整
+        const charGroups = new Map<string, string[]>();
+        attributeGroups.forEach((group) => {
+            group.characterIds.forEach((charId) => {
+                if (!charGroups.has(charId)) {
+                    charGroups.set(charId, []);
+                }
+                charGroups.get(charId)!.push(group.id);
+            });
+        });
 
         return characters.map((char, index) => {
-            const angle = (2 * Math.PI * index) / characters.length - Math.PI / 2
+            const angle = (2 * Math.PI * index) / characters.length - Math.PI / 2;
             return {
                 id: char.id,
                 name: char.nicknames?.[0] || char.name,
                 x: centerX + radius * Math.cos(angle),
                 y: centerY + radius * Math.sin(angle),
                 character: char
-            }
-        })
-    }, [characters])
+            };
+        });
+    }, [characters, attributeGroups]);
 
     // エッジを計算
     const edges = useMemo<Edge[]>(() => {
@@ -60,20 +98,45 @@ export function RelationshipGraph({
             to: rel.to_character_id,
             label: rel.relationship_type,
             description: rel.description || undefined
-        }))
-    }, [relationships])
+        }));
+    }, [relationships]);
 
     // ノードのマップを作成
     const nodeMap = useMemo(() => {
-        return new Map(nodes.map((n) => [n.id, n]))
-    }, [nodes])
+        return new Map(nodes.map((n) => [n.id, n]));
+    }, [nodes]);
+
+    // グループのバウンディングボックスを計算
+    const groupBounds = useMemo(() => {
+        return attributeGroups.map((group) => {
+            const groupNodes = Array.from(group.characterIds)
+                .map((id) => nodeMap.get(id))
+                .filter((n): n is Node => n !== undefined);
+
+            if (groupNodes.length < 2) return null;
+
+            const padding = 50;
+            const minX = Math.min(...groupNodes.map((n) => n.x)) - padding;
+            const maxX = Math.max(...groupNodes.map((n) => n.x)) + padding;
+            const minY = Math.min(...groupNodes.map((n) => n.y)) - padding;
+            const maxY = Math.max(...groupNodes.map((n) => n.y)) + padding;
+
+            return {
+                ...group,
+                x: minX,
+                y: minY,
+                width: maxX - minX,
+                height: maxY - minY,
+            };
+        }).filter((g): g is NonNullable<typeof g> => g !== null);
+    }, [attributeGroups, nodeMap]);
 
     if (characters.length === 0) {
         return (
             <div className={styles.empty}>
                 <p>登場人物を追加すると相関図が表示されます</p>
             </div>
-        )
+        );
     }
 
     return (
@@ -101,25 +164,51 @@ export function RelationshipGraph({
                         </marker>
                     </defs>
 
+                    {/* グループのバウンディングボックス */}
+                    {groupBounds.map((group) => (
+                        <g key={group.id} className={styles.group}>
+                            <rect
+                                x={group.x}
+                                y={group.y}
+                                width={group.width}
+                                height={group.height}
+                                rx="16"
+                                fill={`${group.color}15`}
+                                stroke={group.color}
+                                strokeWidth="2"
+                                strokeDasharray="8,4"
+                            />
+                            <text
+                                x={group.x + group.width / 2}
+                                y={group.y + 20}
+                                textAnchor="middle"
+                                className={styles.groupLabel}
+                                fill={group.color}
+                            >
+                                {group.name}
+                            </text>
+                        </g>
+                    ))}
+
                     {/* エッジ（関係線） */}
                     {edges.map((edge) => {
-                        const fromNode = nodeMap.get(edge.from)
-                        const toNode = nodeMap.get(edge.to)
-                        if (!fromNode || !toNode) return null
+                        const fromNode = nodeMap.get(edge.from);
+                        const toNode = nodeMap.get(edge.to);
+                        if (!fromNode || !toNode) return null;
 
                         // ノード間の中点を計算
-                        const midX = (fromNode.x + toNode.x) / 2
-                        const midY = (fromNode.y + toNode.y) / 2
+                        const midX = (fromNode.x + toNode.x) / 2;
+                        const midY = (fromNode.y + toNode.y) / 2;
 
                         // ノードの半径分オフセット
-                        const dx = toNode.x - fromNode.x
-                        const dy = toNode.y - fromNode.y
-                        const dist = Math.sqrt(dx * dx + dy * dy)
-                        const nodeRadius = 35
-                        const startX = fromNode.x + (dx / dist) * nodeRadius
-                        const startY = fromNode.y + (dy / dist) * nodeRadius
-                        const endX = toNode.x - (dx / dist) * nodeRadius
-                        const endY = toNode.y - (dy / dist) * nodeRadius
+                        const dx = toNode.x - fromNode.x;
+                        const dy = toNode.y - fromNode.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        const nodeRadius = 35;
+                        const startX = fromNode.x + (dx / dist) * nodeRadius;
+                        const startY = fromNode.y + (dy / dist) * nodeRadius;
+                        const endX = toNode.x - (dx / dist) * nodeRadius;
+                        const endY = toNode.y - (dy / dist) * nodeRadius;
 
                         return (
                             <g key={edge.id} className={styles.edge}>
@@ -141,7 +230,7 @@ export function RelationshipGraph({
                                     {edge.label}
                                 </text>
                             </g>
-                        )
+                        );
                     })}
 
                     {/* ノード（人物） */}
@@ -171,6 +260,28 @@ export function RelationshipGraph({
                 </svg>
             </div>
 
+            {/* グループの凡例 */}
+            {attributeGroups.length > 0 && (
+                <div className={styles.groupLegend}>
+                    <h4 className={styles.legendTitle}>グループ（共通属性）</h4>
+                    <div className={styles.groupTags}>
+                        {attributeGroups.map((group) => (
+                            <span
+                                key={group.id}
+                                className={styles.groupTag}
+                                style={{
+                                    borderColor: group.color,
+                                    backgroundColor: `${group.color}20`,
+                                    color: group.color
+                                }}
+                            >
+                                {group.name} ({group.characterIds.size}人)
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* 関係性の凡例 */}
             {relationships.length > 0 && (
                 <div className={styles.legend}>
@@ -195,5 +306,5 @@ export function RelationshipGraph({
                 </div>
             )}
         </div>
-    )
+    );
 }
